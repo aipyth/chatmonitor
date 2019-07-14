@@ -1,2 +1,2 @@
 release: python chatmonitor/manage.py migrate
-web: gunicorn chatmonitor.chatmonitor.wsgi
+web: gunicorn chatmonitor.wsgi
