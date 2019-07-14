@@ -7,6 +7,7 @@ Django==2.2.3
 django-heroku==0.3.1
 django-telegrambot==1.0.1
 future==0.17.1
+gunicorn==19.9.0
 psycopg2==2.8.3
 pycparser==2.19
 python-telegram-bot==11.1.0
