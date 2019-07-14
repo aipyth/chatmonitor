@@ -1,1 +1,1 @@
-bot: gunicorn chatmonitor.chatmonitor.wsgi
+bot: gunicorn chatmonitor.wsgi
