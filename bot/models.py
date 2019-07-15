@@ -38,14 +38,14 @@ class User(models.Model):
                 yield {
                     'id': chat.id,
                     'title': chat.title,
-                    'keys': chat.get_keys(),
+                    'keys': chat.get_keys(self),
                 }
         else:
             for chat in self.chats.filter(bot_in_chat=True):
                 yield {
                     'id': chat.id,
                     'title': chat.title,
-                    'keys': chat.get_keys(),
+                    'keys': chat.get_keys(self),
                 }
 
 
@@ -61,7 +61,6 @@ class Chat(models.Model):
         (CHANNEL_CHAT, 'channel'),
     )
 
-    active = models.BooleanField(default=True)
     bot_in_chat = models.BooleanField(default=True)
     chat_id = models.BigIntegerField(unique=True)
     chat_type = models.CharField(
@@ -70,23 +69,28 @@ class Chat(models.Model):
     )
     title = models.TextField(blank=True)
     username = models.CharField(max_length=512, blank=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chats')
+    user = models.ManyToManyField(User, through='Relation', related_name='chats')
 
     objects = LocalManager()
 
 
     def __str__(self):
-        state = 'active' if self.active and self.bot_in_chat else 'unactive'
-        return "\'{chat_title}\' ({user}) Status: {status}".format(chat_title=self.title, user=self.user, status=state)
+        return "{chat_title}".format(chat_title=self.title)
 
 
-    def represent(self):
-        return "{} {}".format(self.title, '☑️' if self.active else '❎')
+    def represent(self, user):
+        active = self.relation_set.filter(user=user)[0].active
+        return "{} {}".format(self.title, '☑️' if active else '❎')
 
     
-    def get_keys(self):
-        return ' | '.join([kw.key for kw in self.keywords.all()])
+    def get_keys(self, user):
+        return ' | '.join([kw.key for kw in self.keywords.filter(user=self)])
 
+
+class Relation(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    chat = models.ForeignKey(Chat, on_delete=models.CASCADE)
+    active = models.BooleanField(default=True)
 
 
 class Keyword(models.Model):

@@ -63,45 +63,54 @@ def chat_created(bot, update):
     if update.message.chat.type in ('private', 'channel'):
         return
 
-    user = User.objects.get(chat_id=update.effective_user.id)
-
     for literal, ltype in Chat.CHATS:
         if update.message.chat.type == ltype:
             chat_type = literal
 
     chat = Chat(chat_id=update.message.chat.id, chat_type=chat_type, title=update.message.chat.title)
-    chat.user = user
     chat.save()
 
-    # TODO: ask user what to do with this chat
-    # bot.sendMessage(chat.user.chat_id, text="You have added me to {}".format(chat.title))
+    for user in User.objects.all():
+        try:
+            if update.message.chat.get_chat_member(user.chat_id):
+                logger.debug("{} in {}. Relating them...".format(user, chat))
+                chat.user.add(user)
+        except telegram.TelegramError:
+            logger.debug("{} not in {}. Skipping...".format(user, chat))
 
 
 def new_chat_members(bot, update):
     if update.message.chat.type in ('private', 'channel'):
         return
 
-    user = User.objects.get(chat_id=update.effective_user.id)
     chat = Chat.objects.get_or_none(chat_id=update.message.chat.id)
     
     for member in update.message.new_chat_members:
         if member.username == bot.username:
             if chat:
                 chat.bot_in_chat = True
+
             else:
                 for literal, ltype in Chat.CHATS:
                     if update.message.chat.type == ltype:
                         chat_type = literal
 
                 chat = Chat(chat_id=update.message.chat.id, chat_type=chat_type, title=update.message.chat.title)
-                chat.user = user
-            chat.save()
-            break
-    else:
-        return
-    # TODO: ask user what to do with this chat
-    # bot.sendMessage(chat.user.chat_id, text="You have added me to {}".format(chat.title))
 
+            chat.save()
+
+            for user in User.objects.all():
+                try:
+                    if update.message.chat.get_chat_member(user.chat_id):
+                        logger.debug("{} in {}. Relating them...".format(user, chat))
+                        chat.user.add(user)
+                except telegram.TelegramError:
+                    logger.debug("{} not in {}. Skipping...".format(user, chat))
+        else:
+            user = User.objects.get_or_none(chat_id=member.id)
+            if user:
+                logger.debug("{} in {}. Relating them...".format(user, chat))
+                chat.user.add(user)
 
 
 def left_chat_member(bot, update):
@@ -111,7 +120,6 @@ def left_chat_member(bot, update):
     if update.message.left_chat_member.username == bot.username:
         chat = Chat.objects.get(chat_id=update.message.chat.id)
         chat.bot_in_chat = False
-        chat.active = False
         chat.save()
     else:
         return
@@ -201,7 +209,9 @@ def process_pinning(bot, update):
     match = re.match(text.re.pin_key_to_chat, update.message.text)
     chat_id = match.group(1)
     key = match.group(2)
-    kw = user.keywords.filter(key=key)[0]
+    try:
+        kw = user.keywords.filter(key=key)[0]
+    except IndexError: return
     chat = Chat.objects.get(id=chat_id)
     chat.keywords.add(kw)
 
@@ -253,7 +263,7 @@ def prepare_key_list(bot, update):
                 id=uuid.uuid4(),
                 title=kw.key,
                 input_message_content=telegram.InputTextMessageContent(message_text=text.actions_text.unpin_key.unpin.format(chat=chat.id, key=kw.key))
-            ) for kw in chat.keywords.all()
+            ) for kw in chat.keywords.filter(user=user)
         ],
         cache_time=3,
         is_personal=True,
@@ -268,7 +278,7 @@ def unpin_key_from_chat(bot, update):
     key = match.group(2)
     chat = Chat.objects.get(id=chat_id)
     try:
-        kw = chat.keywords.filter(key=key)[0]
+        kw = chat.keywords.filter(key=key, user=user)[0]
     except IndexError: return
     chat.keywords.remove(kw)
 
@@ -304,10 +314,9 @@ def delete_key(bot, update):
         key = user.keywords.filter(key=key)[0]
     except IndexError: return
 
-    if key in user.keywords.all():
-        key.delete()
+    key.delete()
 
-        bot.sendMessage(user.chat_id, text=random.choice(text.actions_text.key_deletion.success))
+    bot.sendMessage(user.chat_id, text=random.choice(text.actions_text.key_deletion.success))
 
 
 
@@ -321,7 +330,7 @@ def show_all_chats(bot, update):
         return
 
     keyboard = telegram.InlineKeyboardMarkup([
-        [telegram.InlineKeyboardButton(text=chat.represent(), callback_data=text.buttons.chats.switch.format(chat=chat.id))] for chat in user.chats.all()
+        [telegram.InlineKeyboardButton(text=chat.represent(user), callback_data=text.buttons.chats.switch.format(chat=chat.id))] for chat in user.chats.all()
     ])
     bot.sendMessage(user.chat_id, text=text.actions_text.chats.show_all, reply_markup=keyboard)
 
@@ -334,13 +343,14 @@ def switch_chat(bot, update):
 
     if chat in user.chats.all():
         if chat.bot_in_chat:
-            chat.active = not chat.active
-            chat.save()
+            relation = chat.relation_set.filter(user=user)[0]
+            relation.active = not relation.active
+            relation.save()
 
             update.callback_query.answer(text=text.actions_text.chats.switch_success)
 
             keyboard = telegram.InlineKeyboardMarkup([
-                [telegram.InlineKeyboardButton(text=chat.represent(), callback_data=text.buttons.chats.switch.format(chat=chat.id))] for chat in user.chats.all()
+                [telegram.InlineKeyboardButton(text=chat.represent(user), callback_data=text.buttons.chats.switch.format(chat=chat.id))] for chat in user.chats.all()
             ])
             update.callback_query.edit_message_reply_markup(reply_markup=keyboard)
 
@@ -356,20 +366,21 @@ def handle_group_message(bot, update):
     # logger.debug("handled {}".format(update.message))
     chat_id = update.message.chat.id
     chat = Chat.objects.get(chat_id=chat_id)
-    user = chat.user
+
     keywords = []
-    if chat.active:
-        for keyword in chat.keywords.all():
-            if keyword.key.lower() in update.message.text.lower():
-                keywords.append(keyword)
-        if not keywords:
-            logger.debug("Skipped message {}:{}".format(update.message.message_id, update.message.text))
-            return
-        keys = ', '.join([kw.key for kw in keywords])
-        logger.debug("Found keywords ({}) in {}:{}".format(keys, update.message.message_id, update.message.text))
-        logger.debug("Sending message {} to {}".format(update.message.message_id, user.chat_id))
-        update.message.forward(user.chat_id)
-        bot.sendMessage(user.chat_id, text=text.actions_text.chats.new_message.format(key=keys, username=update.message.from_user.username, chat=chat.title), parse_mode=telegram.ParseMode.MARKDOWN)
+    for keyword in chat.keywords.all():
+        if keyword.key.lower() in update.message.text.lower():
+            keywords.append(keyword)
+    if not keywords:
+        logger.debug("Skipped message {}:{}".format(update.message.message_id, update.message.text))
+        return
+    keys = ', '.join([kw.key for kw in keywords])
+    logger.debug("Found keywords ({}) in {}:{}".format(keys, update.message.message_id, update.message.text))
+    for key in keywords:
+        logger.debug("Sending message {} to {}".format(update.message.message_id, key.user.chat_id))
+        update.message.forward(key.user.chat_id)
+        bot.sendMessage(key.user.chat_id, text=text.actions_text.chats.new_message.format(key=key.key, username=update.message.from_user.username, chat=chat.title), parse_mode=telegram.ParseMode.MARKDOWN)
+        # keyword.user.chat_id
 
 
 
