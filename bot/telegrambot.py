@@ -72,7 +72,7 @@ def chat_created(bot, update):
 
     for user in User.objects.all():
         try:
-            if update.message.chat.get_chat_member(user.chat_id):
+            if bot.getChatMember(chat.chat_id, user.chat_id):
                 logger.debug("{} in {}. Relating them...".format(user, chat))
                 chat.user.add(user)
         except telegram.TelegramError:
@@ -101,7 +101,7 @@ def new_chat_members(bot, update):
 
             for user in User.objects.all():
                 try:
-                    if update.message.chat.get_chat_member(user.chat_id):
+                    if bot.getChatMember(chat.chat_id, user.chat_id):
                         logger.debug("{} in {}. Relating them...".format(user, chat))
                         chat.user.add(user)
                 except telegram.TelegramError:
