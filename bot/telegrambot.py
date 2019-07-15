@@ -65,7 +65,11 @@ def chat_created(bot, update):
 
     user = User.objects.get(chat_id=update.effective_user.id)
 
-    chat = Chat(chat_id=update.message.chat.id, chat_type=update.message.chat.type, title=update.message.chat.title)
+    for literal, ltype in Chat.CHATS:
+        if update.message.chat.type == ltype:
+            chat_type = literal
+
+    chat = Chat(chat_id=update.message.chat.id, chat_type=chat_type, title=update.message.chat.title)
     chat.user = user
     chat.save()
 
