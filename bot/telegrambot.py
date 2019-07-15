@@ -89,7 +89,11 @@ def new_chat_members(bot, update):
             if chat:
                 chat.bot_in_chat = True
             else:
-                chat = Chat(chat_id=update.message.chat.id, chat_type=update.message.chat.type, title=update.message.chat.title)
+                for literal, ltype in Chat.CHATS:
+                    if update.message.chat.type == ltype:
+                        chat_type = literal
+
+                chat = Chat(chat_id=update.message.chat.id, chat_type=chat_type, title=update.message.chat.title)
                 chat.user = user
             chat.save()
             break
