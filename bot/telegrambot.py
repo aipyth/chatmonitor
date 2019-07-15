@@ -124,7 +124,7 @@ def left_chat_member(bot, update):
     else:
         return
     
-    bot.sendMessage(chat.user.chat_id, text=text.actions_text.chats.deleted_from.format(chat.title), parse_mode=telegram.ParseMode.MARKDOWN)
+    # bot.sendMessage(chat.user.chat_id, text=text.actions_text.chats.deleted_from.format(chat.title), parse_mode=telegram.ParseMode.MARKDOWN)
 
 
 
