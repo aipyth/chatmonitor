@@ -103,4 +103,4 @@ class Keyword(models.Model):
     
     def prepare_description_with_emoji(self):
         chats = self.chats.all()
-        return ', '.join(['{} {}'.format(chat.title, '🟢' if  chat.active else '🔴') for chat in chats])
+        return ', '.join(['{} {}'.format(chat.title, '🔵' if  chat.active else '🔴') for chat in chats])

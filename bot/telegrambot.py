@@ -9,6 +9,7 @@ from telegram.ext import CommandHandler, MessageHandler, ConversationHandler, Ca
 from django_telegrambot.apps import DjangoTelegramBot
 
 from .models import User, Chat, Keyword
+from .bot_filters import GroupFilters
 
 
 import logging
@@ -69,7 +70,7 @@ def chat_created(bot, update):
     chat.save()
 
     # TODO: ask user what to do with this chat
-    bot.sendMessage(chat.user.chat_id, text="You have added me to {}".format(chat.title))
+    # bot.sendMessage(chat.user.chat_id, text="You have added me to {}".format(chat.title))
 
 
 def new_chat_members(bot, update):
@@ -91,7 +92,7 @@ def new_chat_members(bot, update):
     else:
         return
     # TODO: ask user what to do with this chat
-    bot.sendMessage(chat.user.chat_id, text="You have added me to {}".format(chat.title))
+    # bot.sendMessage(chat.user.chat_id, text="You have added me to {}".format(chat.title))
 
 
 
@@ -125,8 +126,10 @@ def process_key(bot, update):
     key = Keyword(key=update.message.text, user=user)
     key.save()
 
-    # TODO: add 'Pin to chat' inline button
-    bot.sendMessage(user.chat_id, text=text.actions_text.add_key.success)
+    keyboard = telegram.InlineKeyboardMarkup([
+        [telegram.InlineKeyboardButton(text=text.buttons.menu.pin_key_to_chat, switch_inline_query_current_chat=text.buttons.menu.pin_key_to_chat[:-2])],
+    ])
+    bot.sendMessage(user.chat_id, text=text.actions_text.add_key.success, reply_markup=keyboard)
     return -1
 
 
@@ -331,6 +334,28 @@ def switch_chat(bot, update):
 
 
 
+# Group messages
+
+def handle_group_message(bot, update):
+    # logger.debug("handled {}".format(update.message))
+    chat_id = update.message.chat.id
+    chat = Chat.objects.get(chat_id=chat_id)
+    user = chat.user
+    keywords = []
+    if chat.active:
+        for keyword in chat.keywords.all():
+            if keyword.key.lower() in update.message.text.lower():
+                keywords.append(keyword)
+        if not keywords:
+            logger.debug("Skipped message {}:{}".format(update.message.message_id, update.message.text))
+            return
+        keys = ', '.join([kw.key for kw in keywords])
+        logger.debug("Found keywords ({}) in {}:{}".format(keys, update.message.message_id, update.message.text))
+        logger.debug("Sending message {} to {}".format(update.message.message_id, user.chat_id))
+        update.message.forward(user.chat_id)
+        bot.sendMessage(user.chat_id, text=text.actions_text.chats.new_message.format(key=keys, username=update.message.from_user.username, chat=chat.title), parse_mode=telegram.ParseMode.MARKDOWN)
+
+
 
 
 
@@ -345,6 +370,18 @@ def main():
 
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("menu", menu))
+
+    # Handling adding and deleteing bot to/from the chat
+
+    dp.add_handler(MessageHandler(Filters.status_update.new_chat_members, new_chat_members))
+
+    dp.add_handler(MessageHandler(Filters.status_update.chat_created, chat_created))
+
+    dp.add_handler(MessageHandler(Filters.status_update.left_chat_member, left_chat_member))
+
+    # Handle group messages
+
+    dp.add_handler(MessageHandler(GroupFilters.allowed_groups, handle_group_message))
 
     # Add key handler
     dp.add_handler(ConversationHandler(
@@ -388,10 +425,5 @@ def main():
     dp.add_handler(CallbackQueryHandler(callback=show_all_chats ,pattern=text.buttons.menu.chat_monitor))
 
     dp.add_handler(CallbackQueryHandler(callback=switch_chat, pattern=text.re.switch))
-
-    # Handling adding and deleteing bot to/from the chat
-    dp.add_handler(MessageHandler(Filters.status_update.new_chat_members, new_chat_members))
-    dp.add_handler(MessageHandler(Filters.status_update.chat_created, chat_created))
-    dp.add_handler(MessageHandler(Filters.status_update.left_chat_member, left_chat_member))
 
 
