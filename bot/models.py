@@ -84,7 +84,7 @@ class Chat(models.Model):
 
     
     def get_keys(self, user):
-        return ' | '.join([kw.key for kw in self.keywords.filter(user=self)])
+        return ' | '.join([kw.key for kw in self.keywords.filter(user=user)])
 
 
 class Relation(models.Model):

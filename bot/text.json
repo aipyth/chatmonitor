@@ -72,7 +72,7 @@
             "no_chats": "У тебя нету чатов. Наверное, тебе нужно меня добавить в один из них.",
             "switch_fail": "Прости, я не могу изменить мониторинг. Меня нету в чате((",
             "deleted_from": "Я уже не в чате `{}`, да и не могу получать сообщения от него пока не добавят люди обратно((",
-            "new_message": "Keyword: `{key}`\nUsername: `{username}`\nChat: {chat}"
+            "new_message": "Keyword: `{key}`\nUsername: @{username}\nChat: {chat}"
         }
     },
 

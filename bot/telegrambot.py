@@ -26,7 +26,9 @@ with open('bot/text.json', encoding='utf8') as file:
 def start(bot, update):
     user = User.objects.get_or_none(chat_id=update.message.chat.id)
     if not user:
-        user = User(chat_id=update.message.chat.id, name=update.message.from_user.full_name, username=update.message.from_user.username)
+        username = update.message.from_user.username
+        username = username if username else ''
+        user = User(chat_id=update.message.chat.id, name=update.message.from_user.full_name, username=username)
         user.save()
 
     keyboard = telegram.InlineKeyboardMarkup([
@@ -101,7 +103,9 @@ def new_chat_members(bot, update):
 
             for user in User.objects.all():
                 try:
-                    if bot.getChatMember(chat.chat_id, user.chat_id):
+                    in_chat = bot.getChatMember(chat.chat_id, user.chat_id)
+                    logger.debug("user in chat {} {}".format(user, in_chat))
+                    if in_chat.status not in ('left', 'kicked'):
                         logger.debug("{} in {}. Relating them...".format(user, chat))
                         chat.user.add(user)
                 except telegram.TelegramError:
@@ -363,7 +367,6 @@ def switch_chat(bot, update):
 # Group messages
 
 def handle_group_message(bot, update):
-    # logger.debug("handled {}".format(update.message))
     chat_id = update.message.chat.id
     chat = Chat.objects.get(chat_id=chat_id)
 
@@ -377,10 +380,11 @@ def handle_group_message(bot, update):
     keys = ', '.join([kw.key for kw in keywords])
     logger.debug("Found keywords ({}) in {}:{}".format(keys, update.message.message_id, update.message.text))
     for key in keywords:
-        logger.debug("Sending message {} to {}".format(update.message.message_id, key.user.chat_id))
-        update.message.forward(key.user.chat_id)
-        bot.sendMessage(key.user.chat_id, text=text.actions_text.chats.new_message.format(key=key.key, username=update.message.from_user.username, chat=chat.title), parse_mode=telegram.ParseMode.MARKDOWN)
-        # keyword.user.chat_id
+        relation = key.user.relation_set.filter(chat=chat)[0]
+        if relation.active:
+            logger.debug("Sending message {} to {}".format(update.message.message_id, key.user.chat_id))
+            update.message.forward(key.user.chat_id)
+            bot.sendMessage(key.user.chat_id, text=text.actions_text.chats.new_message.format(key=key.key, username=update.message.from_user.username, chat=chat.title), parse_mode=telegram.ParseMode.MARKDOWN)
 
 
 
