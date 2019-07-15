@@ -116,7 +116,7 @@ def left_chat_member(bot, update):
     else:
         return
     
-    bot.sendMessage(chat.user.chat_id, text="I am deleted from \"{}\" chat. You cannot monitor these chat's messages till I am added to again.".format(chat.title))
+    bot.sendMessage(chat.user.chat_id, text=text.actions_text.chats.deleted_from.format(chat.title), parse_mode=telegram.ParseMode.MARKDOWN)
 
 
 
@@ -165,7 +165,7 @@ def process_pinning_key(bot, update):
     user = User.objects.get(chat_id=update.effective_user.id)
 
     key = re.match(text.re.choose_pin_key, update.message.text).group(1)
-    kw = Keyword.objects.get(key=key)
+    kw = user.keywords.filter(key=key)[0]
 
     update.message.delete()
 
@@ -179,7 +179,7 @@ def process_pinning_chat(bot, update):
     user = User.objects.get(chat_id=update.effective_user.id)
 
     key = re.match(text.re.choose_chat_to_pin, update.inline_query.query).group(1)
-    kw = Keyword.objects.get(key=key)
+    kw = user.keywords.filter(key=key)[0]
 
     update.inline_query.answer(
         results=[
@@ -201,7 +201,7 @@ def process_pinning(bot, update):
     match = re.match(text.re.pin_key_to_chat, update.message.text)
     chat_id = match.group(1)
     key = match.group(2)
-    kw = Keyword.objects.get(key=key)
+    kw = user.keywords.filter(key=key)[0]
     chat = Chat.objects.get(id=chat_id)
     chat.keywords.add(kw)
 
@@ -266,8 +266,10 @@ def unpin_key_from_chat(bot, update):
     match = re.match(text.re.unpin_key_from_chat, update.message.text)
     chat_id = match.group(1)
     key = match.group(2)
-    kw = Keyword.objects.get(key=key)
     chat = Chat.objects.get(id=chat_id)
+    try:
+        kw = chat.keywords.filter(key=key)[0]
+    except IndexError: return
     chat.keywords.remove(kw)
 
     bot.sendMessage(user.chat_id, text=random.choice(text.actions_text.unpin_key.success)) 
@@ -298,7 +300,9 @@ def delete_key(bot, update):
     user = User.objects.get(chat_id=update.effective_user.id)
 
     key = re.match(text.re.delete_key, update.message.text).group(1)
-    key = Keyword.objects.get(key=key)
+    try:
+        key = user.keywords.filter(key=key)[0]
+    except IndexError: return
 
     if key in user.keywords.all():
         key.delete()
@@ -311,6 +315,10 @@ def delete_key(bot, update):
 
 def show_all_chats(bot, update):
     user = User.objects.get(chat_id=update.effective_user.id)
+
+    if user.chats.count() == 0:
+        bot.sendMessage(user.chat_id, text=text.actions_text.chats.no_chats)
+        return
 
     keyboard = telegram.InlineKeyboardMarkup([
         [telegram.InlineKeyboardButton(text=chat.represent(), callback_data=text.buttons.chats.switch.format(chat=chat.id))] for chat in user.chats.all()
