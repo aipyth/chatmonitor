@@ -175,7 +175,8 @@ def add_key(bot, update):
 def process_key(bot, update):
     user = User.objects.get(chat_id=update.effective_user.id)
 
-    for k in update.message.text.split('\n'):
+    keys = set(update.message.text.split('\n'))
+    for k in keys:
         key = Keyword(key=k, user=user)
         key.save()
 
@@ -198,7 +199,8 @@ def add_neg_key(bot, update):
 def process_neg_key(bot, update):
     user = User.objects.get(chat_id=update.effective_user.id)
 
-    for k in update.message.text.split('\n'):
+    keys = set(update.message.text.split('\n'))
+    for k in keys:
         nkey = NegativeKeyword(key=k, user=user)
         nkey.save()
 
