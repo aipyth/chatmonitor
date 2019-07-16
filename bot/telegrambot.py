@@ -701,6 +701,9 @@ def handle_group_message(bot, update):
     chat_id = update.message.chat.id
     chat = Chat.objects.get(chat_id=chat_id)
 
+    if not update.message.text:
+        return
+
     keywords = []
     for keyword in chat.keywords.all():
         state = True
