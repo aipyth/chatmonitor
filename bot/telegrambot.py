@@ -143,8 +143,9 @@ def add_key(bot, update):
 def process_key(bot, update):
     user = User.objects.get(chat_id=update.effective_user.id)
 
-    key = Keyword(key=update.message.text, user=user)
-    key.save()
+    for k in update.message.text.split('\n'):
+        key = Keyword(key=k, user=user)
+        key.save()
 
     keyboard = telegram.InlineKeyboardMarkup([
         [telegram.InlineKeyboardButton(text=text.buttons.menu.pin_key_to_chat, switch_inline_query_current_chat=text.buttons.menu.pin_key_to_chat[:-2])],
@@ -163,6 +164,11 @@ def pin_key_to_chat(bot, update):
         results=[
             telegram.InlineQueryResultArticle(
                 id=uuid.uuid4(),
+                title='Все ключи',
+                input_message_content=telegram.InputTextMessageContent(message_text=text.actions_text.pin_key.choose_pin_key.format(text.actions_text.pin_key.all_keys)))
+        ] + [
+            telegram.InlineQueryResultArticle(
+                id=uuid.uuid4(),
                 title=keyword.get('title'),
                 description=keyword.get('description'),
                 input_message_content=telegram.InputTextMessageContent(message_text=text.actions_text.pin_key.choose_pin_key.format(keyword.get('title')))
@@ -177,12 +183,12 @@ def process_pinning_key(bot, update):
     user = User.objects.get(chat_id=update.effective_user.id)
 
     key = re.match(text.re.choose_pin_key, update.message.text).group(1)
-    kw = user.keywords.filter(key=key)[0]
+    # kw = user.keywords.filter(key=key)[0]
 
     update.message.delete()
 
     keyboard = telegram.InlineKeyboardMarkup([
-        [telegram.InlineKeyboardButton(text=text.buttons.pin_key_to_chat.pin_to_chat, switch_inline_query_current_chat=text.buttons.pin_key_to_chat.choose_chat_to_pin_pattern.format(kw.key))]
+        [telegram.InlineKeyboardButton(text=text.buttons.pin_key_to_chat.pin_to_chat, switch_inline_query_current_chat=text.buttons.pin_key_to_chat.choose_chat_to_pin_pattern.format(key))]
     ])
     bot.sendMessage(user.chat_id, text=text.actions_text.pin_key.choose_chat, reply_markup=keyboard)
 
@@ -191,7 +197,6 @@ def process_pinning_chat(bot, update):
     user = User.objects.get(chat_id=update.effective_user.id)
 
     key = re.match(text.re.choose_chat_to_pin, update.inline_query.query).group(1)
-    kw = user.keywords.filter(key=key)[0]
 
     update.inline_query.answer(
         results=[
@@ -199,8 +204,8 @@ def process_pinning_chat(bot, update):
                 id=uuid.uuid4(),
                 title=chat.get('title'),
                 description=chat.get('keys'),
-                input_message_content=telegram.InputTextMessageContent(message_text=text.actions_text.pin_key.pin_key_to_chat.format(chat=chat.get('id'), key=kw.key))
-            ) for chat in user.get_chats_info(kw)
+                input_message_content=telegram.InputTextMessageContent(message_text=text.actions_text.pin_key.pin_key_to_chat.format(chat=chat.get('id'), key=key))
+            ) for chat in user.get_chats_info()
         ],
         cache_time=3,
         is_personal=True,
@@ -213,11 +218,16 @@ def process_pinning(bot, update):
     match = re.match(text.re.pin_key_to_chat, update.message.text)
     chat_id = match.group(1)
     key = match.group(2)
-    try:
-        kw = user.keywords.filter(key=key)[0]
-    except IndexError: return
+    
     chat = Chat.objects.get(id=chat_id)
-    chat.keywords.add(kw)
+    if key == text.actions_text.pin_key.all_keys:
+        for kw in user.keywords.all():
+            chat.keywords.add(kw)
+    else:
+        try:
+            kw = user.keywords.filter(key=key)[0]
+        except IndexError: return
+        chat.keywords.add(kw)
 
     bot.sendMessage(user.chat_id, text=random.choice(text.actions_text.pin_key.success)) 
 
@@ -265,6 +275,11 @@ def prepare_key_list(bot, update):
         results=[
             telegram.InlineQueryResultArticle(
                 id=uuid.uuid4(),
+                title='Все ключи',
+                input_message_content=telegram.InputTextMessageContent(message_text=text.actions_text.unpin_key.unpin.format(chat=chat.id, key=text.actions_text.unpin_key.all_keys)))
+        ] + [
+            telegram.InlineQueryResultArticle(
+                id=uuid.uuid4(),
                 title=kw.key,
                 input_message_content=telegram.InputTextMessageContent(message_text=text.actions_text.unpin_key.unpin.format(chat=chat.id, key=kw.key))
             ) for kw in chat.keywords.filter(user=user)
@@ -281,10 +296,14 @@ def unpin_key_from_chat(bot, update):
     chat_id = match.group(1)
     key = match.group(2)
     chat = Chat.objects.get(id=chat_id)
-    try:
-        kw = chat.keywords.filter(key=key, user=user)[0]
-    except IndexError: return
-    chat.keywords.remove(kw)
+    if key == text.actions_text.unpin_key.all_keys:
+        for kw in chat.keywords.filter(user=user):
+            chat.keywords.remove(kw)
+    else:
+        try:
+            kw = chat.keywords.filter(key=key, user=user)[0]
+        except IndexError: return
+        chat.keywords.remove(kw)
 
     bot.sendMessage(user.chat_id, text=random.choice(text.actions_text.unpin_key.success)) 
 

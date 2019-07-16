@@ -40,6 +40,7 @@
         },
         "pin_key": {
             "choose_pin_key": "Я выбираю {}",
+            "all_keys": ":#allkeys#:",
             "choose_chat": "Давай теперь выберем чат",
             "pin_key_to_chat": "Прикрепи к номеру чата {chat} ключ {key}",
             "success": [
@@ -51,6 +52,7 @@
         "unpin_key": {
             "select_chat": "Я выберу {}",
             "choose_key": "Осталось выбрать ключ",
+            "all_keys": ":#allkeys#:",
             "unpin": "Открепи от чата {chat} {key}",
             "success": [
                 "Кааароч, я открепил))",
