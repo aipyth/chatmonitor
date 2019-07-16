@@ -3,12 +3,13 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from contextlib import suppress
 
-# Create your models here.
+
 
 class LocalManager(models.Manager):
     def get_or_none(self, **kwargs):
         with suppress(ObjectDoesNotExist):
             return self.get(**kwargs)
+
 
 
 class User(models.Model):
@@ -26,8 +27,17 @@ class User(models.Model):
     def get_keywords_info(self):
         for keyword in self.keywords.all():
             yield {
+                'id': keyword.id,
                 'title': keyword.key,
-                'description': keyword.prepare_description_with_emoji(),
+                'description': keyword.prepare_description(),
+            }
+
+
+    def get_neg_keywords_info(self):
+        for keyword in self.negativekeyword.all():
+            yield {
+                'title': keyword.key,
+                'description': keyword.prepare_description(),
             }
 
 
@@ -47,6 +57,7 @@ class User(models.Model):
                     'title': chat.title,
                     'keys': chat.get_keys(self),
                 }
+
 
 
 class Chat(models.Model):
@@ -87,10 +98,12 @@ class Chat(models.Model):
         return ' | '.join([kw.key for kw in self.keywords.filter(user=user)])
 
 
+
 class Relation(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE)
     active = models.BooleanField(default=True)
+
 
 
 class Keyword(models.Model):
@@ -105,6 +118,27 @@ class Keyword(models.Model):
         return "'{}' by {}".format(self.key, self.user)
 
     
-    def prepare_description_with_emoji(self):
+    def prepare_description(self):
         chats = self.chats.all()
         return ', '.join(['{}'.format(chat.title) for chat in chats])
+
+    
+    def nkeys_description(self):
+        return ', '.join([nkey.key for nkey in self.negativekeyword.all()])
+
+
+
+class NegativeKeyword(models.Model):
+    keywords = models.ManyToManyField(Keyword, related_name='negativekeyword')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='negativekeyword')
+    key = models.TextField()
+
+    objects = LocalManager()
+
+
+    def __str__(self):
+        return "'{}' by {}".format(self.key, self.user)
+
+    
+    def prepare_description(self):
+        return ', '.join(['{}'.format(kw.key) for kw in self.keywords.all()])
