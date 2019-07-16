@@ -25,38 +25,34 @@ class User(models.Model):
 
 
     def get_keywords_info(self):
-        for keyword in self.keywords.all():
-            yield {
-                'id': keyword.id,
-                'title': keyword.key,
-                'description': keyword.prepare_description(),
-            }
+        return [ {
+                    'id': keyword.id,
+                    'title': keyword.key,
+                    'description': keyword.prepare_description()
+                    } for keyword in self.keywords.all()]
 
 
     def get_neg_keywords_info(self):
-        for keyword in self.negativekeyword.all():
-            yield {
-                'title': keyword.key,
-                'description': keyword.prepare_description(),
-            }
+        return [ {
+            'title': keyword.key,
+            'description': keyword.prepare_description(),
+            } for keyword in self.negativekeyword.all()]
 
 
     def get_chats_info(self, kw=None):
         if kw:
             # TODO: return only chats without current key binded to them
-            for chat in self.chats.filter(bot_in_chat=True):
-                yield {
-                    'id': chat.id,
-                    'title': chat.title,
-                    'keys': chat.get_keys(self),
-                }
+            return [ {
+                'id': chat.id,
+                'title': chat.title,
+                'keys': chat.get_keys(self),
+                } for chat in self.chats.filter(bot_in_chat=True)]
         else:
-            for chat in self.chats.filter(bot_in_chat=True):
-                yield {
-                    'id': chat.id,
-                    'title': chat.title,
-                    'keys': chat.get_keys(self),
-                }
+            return [ {
+                'id': chat.id,
+                'title': chat.title,
+                'keys': chat.get_keys(self),
+                } for chat in self.chats.filter(bot_in_chat=True)]
 
 
 

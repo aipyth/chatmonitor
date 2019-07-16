@@ -7,6 +7,7 @@ import uuid
 import telegram
 from telegram.ext import CommandHandler, MessageHandler, ConversationHandler, CallbackQueryHandler, InlineQueryHandler, RegexHandler, Filters
 from django_telegrambot.apps import DjangoTelegramBot
+from django.core.paginator import Paginator
 
 from .models import User, Chat, Keyword, NegativeKeyword
 from .bot_filters import GroupFilters
@@ -217,6 +218,12 @@ def process_neg_key(bot, update):
 def pin_key_to_chat(bot, update):
     user = User.objects.get(chat_id=update.effective_user.id)
 
+    objects = user.get_keywords_info()
+    offset = 1 if not update.inline_query.offset else update.inline_query.offset
+    paginator = Paginator(objects, 40)
+    keywords = paginator.page(int(offset))
+    next_offset = str(keywords.next_page_number()) if keywords.has_next() else ''
+
     update.inline_query.answer(
         results=[
             telegram.InlineQueryResultArticle(
@@ -229,10 +236,11 @@ def pin_key_to_chat(bot, update):
                 title=keyword.get('title'),
                 description=keyword.get('description'),
                 input_message_content=telegram.InputTextMessageContent(message_text=text.actions_text.pin_key.choose_pin_key.format(keyword.get('title')))
-            ) for keyword in user.get_keywords_info()
+            ) for keyword in keywords
         ],
         cache_time=3,
         is_personal=True,
+        next_offset=next_offset,
     )
 
 
@@ -254,6 +262,12 @@ def process_pinning_chat(bot, update):
 
     key = re.match(text.re.choose_chat_to_pin, update.inline_query.query).group(1)
 
+    objects = user.get_chats_info()
+    offset = 1 if not update.inline_query.offset else update.inline_query.offset
+    paginator = Paginator(objects, 40)
+    chats = paginator.page(int(offset))
+    next_offset = str(chats.next_page_number()) if chats.has_next() else ''
+
     update.inline_query.answer(
         results=[
             telegram.InlineQueryResultArticle(
@@ -261,7 +275,7 @@ def process_pinning_chat(bot, update):
                 title=chat.get('title'),
                 description=chat.get('keys'),
                 input_message_content=telegram.InputTextMessageContent(message_text=text.actions_text.pin_key.pin_key_to_chat.format(chat=chat.get('id'), key=key))
-            ) for chat in user.get_chats_info()
+            ) for chat in chats
         ],
         cache_time=3,
         is_personal=True,
@@ -294,6 +308,12 @@ def process_pinning(bot, update):
 def prepare_chat_selection(bot, update):
     user = User.objects.get(chat_id=update.effective_user.id)
 
+    objects = user.get_chats_info()
+    offset = 1 if not update.inline_query.offset else update.inline_query.offset
+    paginator = Paginator(objects, 40)
+    chats = paginator.page(int(offset))
+    next_offset = str(chats.next_page_number()) if chats.has_next() else ''
+
     update.inline_query.answer(
         results=[
             telegram.InlineQueryResultArticle(
@@ -301,7 +321,7 @@ def prepare_chat_selection(bot, update):
                 title=chat.get('title'),
                 description=chat.get('keys'),
                 input_message_content=telegram.InputTextMessageContent(message_text=text.actions_text.unpin_key.select_chat.format(chat.get('id')))
-            ) for chat in user.get_chats_info()
+            ) for chat in chats
         ],
         cache_time=3,
         is_personal=True,
@@ -327,6 +347,12 @@ def prepare_key_list(bot, update):
     chat_id = re.match(text.re.unpin_key_choose_key, update.inline_query.query).group(1)
     chat = Chat.objects.get(id=chat_id)
 
+    objects = chat.keywords.filter(user=user)
+    offset = 1 if not update.inline_query.offset else update.inline_query.offset
+    paginator = Paginator(objects, 40)
+    keywords = paginator.page(int(offset))
+    next_offset = str(keywords.next_page_number()) if keywords.has_next() else ''
+
     update.inline_query.answer(
         results=[
             telegram.InlineQueryResultArticle(
@@ -338,7 +364,7 @@ def prepare_key_list(bot, update):
                 id=uuid.uuid4(),
                 title=kw.key,
                 input_message_content=telegram.InputTextMessageContent(message_text=text.actions_text.unpin_key.unpin.format(chat=chat.id, key=kw.key))
-            ) for kw in chat.keywords.filter(user=user)
+            ) for kw in keywords
         ],
         cache_time=3,
         is_personal=True,
@@ -371,6 +397,12 @@ def unpin_key_from_chat(bot, update):
 def deletion_choose_keyword(bot, update):
     user = User.objects.get(chat_id=update.effective_user.id)
 
+    objects = user.keywords.all()
+    offset = 1 if not update.inline_query.offset else update.inline_query.offset
+    paginator = Paginator(objects, 40)
+    keywords = paginator.page(int(offset))
+    next_offset = str(keywords.next_page_number()) if keywords.has_next() else ''
+
     update.inline_query.answer(
         results=[
             telegram.InlineQueryResultArticle(
@@ -378,7 +410,7 @@ def deletion_choose_keyword(bot, update):
                 title=kw.key,
                 description=kw.prepare_description(),
                 input_message_content=telegram.InputTextMessageContent(message_text=text.actions_text.key_deletion.delete.format(key=kw.key))
-            ) for kw in user.keywords.all()
+            ) for kw in keywords
         ],
         cache_time=3,
         is_personal=True,
@@ -405,6 +437,12 @@ def delete_key(bot, update):
 def pin_neg_key(bot, update):
     user = User.objects.get(chat_id=update.effective_user.id)
 
+    objects = user.get_neg_keywords_info()
+    offset = 1 if not update.inline_query.offset else update.inline_query.offset
+    paginator = Paginator(objects, 40)
+    keywords = paginator.page(int(offset))
+    next_offset = str(keywords.next_page_number()) if keywords.has_next() else ''
+
     update.inline_query.answer(
         results=[
             telegram.InlineQueryResultArticle(
@@ -417,7 +455,7 @@ def pin_neg_key(bot, update):
                 title=keyword.get('title'),
                 description=keyword.get('description'),
                 input_message_content=telegram.InputTextMessageContent(message_text=text.actions_text.pin_neg_key.choose_pin_key.format(keyword.get('title')))
-            ) for keyword in user.get_neg_keywords_info()
+            ) for keyword in keywords
         ],
         cache_time=3,
         is_personal=True,
@@ -442,6 +480,12 @@ def process_pinning_neg_key_to_key_show_list(bot, update):
 
     keyword = re.match(text.re.choose_key_to_pin, update.inline_query.query).group(1)
 
+    objects = user.get_keywords_info()
+    offset = 1 if not update.inline_query.offset else update.inline_query.offset
+    paginator = Paginator(objects, 40)
+    keywords = paginator.page(int(offset))
+    next_offset = str(keywords.next_page_number()) if keywords.has_next() else ''    
+
     update.inline_query.answer(
         results=[
             telegram.InlineQueryResultArticle(
@@ -449,7 +493,7 @@ def process_pinning_neg_key_to_key_show_list(bot, update):
                 title=key.get('title'),
                 description=key.get('description'),
                 input_message_content=telegram.InputTextMessageContent(message_text=text.actions_text.pin_neg_key.pin_key_to_key.format(key=key.get('id'), nkey=keyword))
-            ) for key in user.get_keywords_info()
+            ) for key in keywords
         ],
         cache_time=3,
         is_personal=True,
@@ -483,6 +527,13 @@ def process_pinning_neg_key_to_key(bot, update):
 
 def prepare_key_selection_for_neg(bot, update):
     user = User.objects.get(chat_id=update.effective_user.id)
+
+    objects = user.keywords.all()
+    offset = 1 if not update.inline_query.offset else update.inline_query.offset
+    paginator = Paginator(objects, 40)
+    keywords = paginator.page(int(offset))
+    next_offset = str(keywords.next_page_number()) if keywords.has_next() else '' 
+
     update.inline_query.answer(
         results=[
             telegram.InlineQueryResultArticle(
@@ -490,7 +541,7 @@ def prepare_key_selection_for_neg(bot, update):
                 title=keyword.key,
                 description=keyword.nkeys_description(),
                 input_message_content=telegram.InputTextMessageContent(message_text=text.actions_text.unpin_neg_key.select_key.format(keyword.id))
-            ) for keyword in user.keywords.all()
+            ) for keyword in keywords
         ],
         cache_time=3,
         is_personal=True,
@@ -516,6 +567,12 @@ def prepare_neg_key_list(bot, update):
     key_id = re.match(text.re.unpin_neg_key_choose_key, update.inline_query.query).group(1)
     key = Keyword.objects.get(id=key_id)
 
+    objects = key.negativekeyword.all()
+    offset = 1 if not update.inline_query.offset else update.inline_query.offset
+    paginator = Paginator(objects, 40)
+    keywords = paginator.page(int(offset))
+    next_offset = str(keywords.next_page_number()) if keywords.has_next() else ''
+
     update.inline_query.answer(
         results=[
             telegram.InlineQueryResultArticle(
@@ -527,7 +584,7 @@ def prepare_neg_key_list(bot, update):
                 id=uuid.uuid4(),
                 title=kw.key,
                 input_message_content=telegram.InputTextMessageContent(message_text=text.actions_text.unpin_neg_key.unpin.format(key=key_id, nkey=kw.key))
-            ) for kw in key.negativekeyword.all()
+            ) for kw in keywords
         ],
         cache_time=3,
         is_personal=True,
@@ -562,6 +619,12 @@ def unpin_key_from_chat(bot, update):
 def negative_key_deletion_choose_keyword(bot, update):
     user = User.objects.get(chat_id=update.effective_user.id)
 
+    objects = key.negativekeyword.all()
+    offset = 1 if not update.inline_query.offset else update.inline_query.offset
+    paginator = Paginator(objects, 40)
+    keywords = paginator.page(int(offset))
+    next_offset = str(keywords.next_page_number()) if keywords.has_next() else ''
+
     update.inline_query.answer(
         results=[
             telegram.InlineQueryResultArticle(
@@ -569,7 +632,7 @@ def negative_key_deletion_choose_keyword(bot, update):
                 title=kw.key,
                 description=kw.prepare_description(),
                 input_message_content=telegram.InputTextMessageContent(message_text=text.actions_text.negative_key_deletion.delete.format(key=kw.key))
-            ) for kw in user.negativekeyword.all()
+            ) for kw in keywords
         ],
         cache_time=3,
         is_personal=True,
