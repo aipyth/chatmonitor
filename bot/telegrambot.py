@@ -619,7 +619,7 @@ def unpin_key_from_chat(bot, update):
 def negative_key_deletion_choose_keyword(bot, update):
     user = User.objects.get(chat_id=update.effective_user.id)
 
-    objects = key.negativekeyword.all()
+    objects = user.negativekeyword.all()
     offset = 1 if not update.inline_query.offset else update.inline_query.offset
     paginator = Paginator(objects, 40)
     keywords = paginator.page(int(offset))
