@@ -373,18 +373,18 @@ def handle_group_message(bot, update):
     keywords = []
     for keyword in chat.keywords.all():
         if keyword.key.lower() in update.message.text.lower():
-            keywords.append(keyword)
+            relation = keyword.user.relation_set.filter(chat=chat)[0]
+            if relation.active:
+                keywords.append(keyword)
     if not keywords:
         logger.debug("Skipped message {}:{}".format(update.message.message_id, update.message.text))
         return
     keys = ', '.join([kw.key for kw in keywords])
     logger.debug("Found keywords ({}) in {}:{}".format(keys, update.message.message_id, update.message.text))
-    for key in keywords:
-        relation = key.user.relation_set.filter(chat=chat)[0]
-        if relation.active:
-            logger.debug("Sending message {} to {}".format(update.message.message_id, key.user.chat_id))
-            update.message.forward(key.user.chat_id)
-            bot.sendMessage(key.user.chat_id, text=text.actions_text.chats.new_message.format(key=key.key, username=update.message.from_user.username, chat=chat.title), parse_mode=telegram.ParseMode.MARKDOWN)
+    users = list(set([kw.user for kw in keywords]))
+    for user in users:
+        logger.debug("Sending message {} to {}".format(update.message.message_id, user.chat_id))
+        update.message.forward(user.chat_id)
 
 
 
