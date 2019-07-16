@@ -490,6 +490,12 @@ def process_pinning_neg_key_to_key_show_list(bot, update):
         results=[
             telegram.InlineQueryResultArticle(
                 id=uuid.uuid4(),
+                title='Все ключи',
+                input_message_content=telegram.InputTextMessageContent(message_text=text.actions_text.pin_neg_key.pin_key_to_key.format(key=0, nkey=keyword))
+            )
+        ] + [
+            telegram.InlineQueryResultArticle(
+                id=uuid.uuid4(),
                 title=key.get('title'),
                 description=key.get('description'),
                 input_message_content=telegram.InputTextMessageContent(message_text=text.actions_text.pin_neg_key.pin_key_to_key.format(key=key.get('id'), nkey=keyword))
@@ -507,17 +513,29 @@ def process_pinning_neg_key_to_key(bot, update):
     key_id = match.group(1)
     nkey = match.group(2)
     
-    key = Keyword.objects.get(id=key_id)
+    
     if nkey == text.actions_text.pin_neg_key.all_keys:
-        for kw in user.negativekeyword.all():
-            key.negativekeyword.add(kw)
+        if int(key_id) == 0:
+            for key in user.keywords.all():
+                for kw in user.negativekeyword.all():
+                    key.negativekeyword.add(kw)
+        else:
+            key = Keyword.objects.get(id=key_id)
+            for kw in user.negativekeyword.all():
+                key.negativekeyword.add(kw)
     else:
         try:
             kw = user.negativekeyword.filter(key=nkey)[0]
         except IndexError: 
             logger.debug("No objects for {}".format(nkey))
             return
-        key.negativekeyword.add(kw)
+        if int(key_id) == 0:
+            for key in user.keywords.all():
+                for kw in user.negativekeyword.all():
+                    key.negativekeyword.add(kw)
+        else:
+            key = Keyword.objects.get(id=key_id)
+            key.negativekeyword.add(kw)
 
     bot.sendMessage(user.chat_id, text=random.choice(text.actions_text.pin_neg_key.success)) 
 
