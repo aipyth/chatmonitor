@@ -15,7 +15,7 @@ from telegram.ext import (CallbackQueryHandler, CommandHandler,
 
 from .bot_filters import GroupFilters
 from .models import Chat, Keyword, NegativeKeyword, User
-
+from . import utils
 
 # Config logging
 debug = os.environ.get('DEBUG', 0)
@@ -319,8 +319,9 @@ def pin_key_to_chat(bot, update):
     
     chat = Chat.objects.get(id=chat_id)
     if key == text.actions.pin_key.all_keys:
-        for kw in user.keywords.all():
-            chat.keywords.add(kw)
+        utils.pin_all_to_chat(user, chat)
+        # for kw in user.keywords.all():
+        #     chat.keywords.add(kw)
     else:
         try:
             kw = user.keywords.filter(key=key)[0]
@@ -416,8 +417,9 @@ def unpin_key_from_chat(bot, update):
     key = match.group(2)
     chat = Chat.objects.get(id=chat_id)
     if key == text.actions.unpin_key.all_keys:
-        for kw in chat.keywords.filter(user=user):
-            chat.keywords.remove(kw)
+        utils.unpin_all_from_chat(user, chat)
+        # for kw in chat.keywords.filter(user=user):
+        #     chat.keywords.remove(kw)
     else:
         try:
             kw = chat.keywords.filter(key=key, user=user)[0]
@@ -566,13 +568,15 @@ def pin_negative_key_to_key(bot, update):
     
     if nkey == text.actions.pin_neg_key.all_keys:
         if int(key_id) == 0:
-            for key in user.keywords.all():
-                for kw in user.negativekeyword.all():
-                    key.negativekeyword.add(kw)
+            utils.pin_all_negative_to_all(user)
+            # for key in user.keywords.all():
+            #     for kw in user.negativekeyword.all():
+            #         key.negativekeyword.add(kw)
         else:
             key = Keyword.objects.get(id=key_id)
-            for kw in user.negativekeyword.all():
-                key.negativekeyword.add(kw)
+            utils.pin_all_negative_to_one(user, key)
+            # for kw in user.negativekeyword.all():
+            #     key.negativekeyword.add(kw)
     else:
         try:
             kw = user.negativekeyword.filter(key=nkey)[0]
@@ -580,9 +584,9 @@ def pin_negative_key_to_key(bot, update):
             logger.debug("No objects for negative key {}. Pinning declined.".format(nkey))
             return
         if int(key_id) == 0:
-            for key in user.keywords.all():
-                for kw in user.negativekeyword.all():
-                    key.negativekeyword.add(kw)
+            utils.pin_one_negative_to_all(user, kw)
+            # for key in user.keywords.all():
+            #     key.negativekeyword.add(kw)
         else:
             key = Keyword.objects.get(id=key_id)
             key.negativekeyword.add(kw)
@@ -745,7 +749,7 @@ def show_all_chats(bot, update):
         return
 
     keyboard = telegram.InlineKeyboardMarkup([
-        [telegram.InlineKeyboardButton(text=chat.represent(user), callback_data=text.buttons.chats.switch.format(chat=chat.id))] for chat in user.chats.all()
+        [telegram.InlineKeyboardButton(text=chat.represent(user), callback_data=text.buttons.chats.switch.format(chat=chat.id))] for chat in user.chats.all()[:99]
     ])
     bot.sendMessage(user.chat_id, text=text.actions.chats.show_all, reply_markup=keyboard)
 
