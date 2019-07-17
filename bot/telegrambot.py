@@ -625,7 +625,7 @@ def prepare_neg_key_list(bot, update):
     logger.debug("Processing finished in function prepare_neg_key_list")
 
 
-def unpin_key_from_chat(bot, update):
+def unpin_neg_key_from_key(bot, update):
     logger.debug("Processing in function unpin_key_from_chat")
     user = User.objects.get(chat_id=update.effective_user.id)
 
@@ -855,7 +855,7 @@ def main():
 
     dp.add_handler(InlineQueryHandler(callback=prepare_neg_key_list, pattern=text.re.unpin_neg_key_choose_key))
 
-    dp.add_handler(RegexHandler(callback=unpin_key_from_chat, pattern=text.re.unpin_neg_key_from_key))
+    dp.add_handler(RegexHandler(callback=unpin_neg_key_from_key, pattern=text.re.unpin_neg_key_from_key))
 
     # Delete key
     dp.add_handler(InlineQueryHandler(callback=deletion_choose_keyword, pattern=text.buttons.menu.delete_key[:-2]))
