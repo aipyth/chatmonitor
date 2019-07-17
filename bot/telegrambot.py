@@ -492,11 +492,6 @@ def get_negative_keys_list_for_pinning(bot, update):
         results=[
             telegram.InlineQueryResultArticle(
                 id=uuid.uuid4(),
-                title='Все ключи',
-                input_message_content=telegram.InputTextMessageContent(message_text=text.actions.pin_neg_key.choose_pin_key.format(text.actions.pin_neg_key.all_keys)))
-        ] + [
-            telegram.InlineQueryResultArticle(
-                id=uuid.uuid4(),
                 title=keyword.key,
                 description=keyword.prepare_description(),
                 input_message_content=telegram.InputTextMessageContent(message_text=text.actions.pin_neg_key.choose_pin_key.format(keyword.key))
@@ -506,6 +501,24 @@ def get_negative_keys_list_for_pinning(bot, update):
         is_personal=True,
         next_offset=next_offset,
     )
+    # update.inline_query.answer(
+    #     results=[
+    #         telegram.InlineQueryResultArticle(
+    #             id=uuid.uuid4(),
+    #             title='Все ключи',
+    #             input_message_content=telegram.InputTextMessageContent(message_text=text.actions.pin_neg_key.choose_pin_key.format(text.actions.pin_neg_key.all_keys)))
+    #     ] + [
+    #         telegram.InlineQueryResultArticle(
+    #             id=uuid.uuid4(),
+    #             title=keyword.key,
+    #             description=keyword.prepare_description(),
+    #             input_message_content=telegram.InputTextMessageContent(message_text=text.actions.pin_neg_key.choose_pin_key.format(keyword.key))
+    #         ) for keyword in keywords
+    #     ],
+    #     cache_time=3,
+    #     is_personal=True,
+    #     next_offset=next_offset,
+    # )
 
 
 def get_key_list_button_for_pinning_negative_key(bot, update):
