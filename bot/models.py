@@ -24,37 +24,6 @@ class User(models.Model):
         return "{} {}".format(self.name, self.username)
 
 
-    def get_keywords_info(self):
-        return [ {
-                    'id': keyword.id,
-                    'title': keyword.key,
-                    'description': keyword.prepare_description()
-                    } for keyword in self.keywords.all()]
-
-
-    def get_neg_keywords_info(self):
-        return [ {
-            'title': keyword.key,
-            'description': keyword.prepare_description(),
-            } for keyword in self.negativekeyword.all()]
-
-
-    def get_chats_info(self, kw=None):
-        if kw:
-            # TODO: return only chats without current key binded to them
-            return [ {
-                'id': chat.id,
-                'title': chat.title,
-                'keys': chat.get_keys(self),
-                } for chat in self.chats.filter(bot_in_chat=True)]
-        else:
-            return [ {
-                'id': chat.id,
-                'title': chat.title,
-                'keys': chat.get_keys(self),
-                } for chat in self.chats.filter(bot_in_chat=True)]
-
-
 
 class Chat(models.Model):
     PRIVATE_CHAT = 'P'
@@ -115,12 +84,12 @@ class Keyword(models.Model):
 
     
     def prepare_description(self):
-        chats = self.chats.all()
+        chats = self.chats.all()[:10]
         return ', '.join(['{}'.format(chat.title) for chat in chats])
 
     
     def nkeys_description(self):
-        return ', '.join([nkey.key for nkey in self.negativekeyword.all()])
+        return ', '.join([nkey.key for nkey in self.negativekeyword.all()[:10]])
 
 
 
@@ -137,4 +106,4 @@ class NegativeKeyword(models.Model):
 
     
     def prepare_description(self):
-        return ', '.join(['{}'.format(kw.key) for kw in self.keywords.all()])
+        return ', '.join(['{}'.format(kw.key) for kw in self.keywords.all()[:10]])
