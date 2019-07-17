@@ -279,6 +279,7 @@ def process_pinning_chat(bot, update):
         ],
         cache_time=3,
         is_personal=True,
+        next_offset=next_offset,
     )
 
 
@@ -325,6 +326,7 @@ def prepare_chat_selection(bot, update):
         ],
         cache_time=3,
         is_personal=True,
+        next_offset=next_offset,
     )
 
 
@@ -368,6 +370,7 @@ def prepare_key_list(bot, update):
         ],
         cache_time=3,
         is_personal=True,
+        next_offset=next_offset,
     )
 
 
@@ -414,6 +417,7 @@ def deletion_choose_keyword(bot, update):
         ],
         cache_time=3,
         is_personal=True,
+        next_offset=next_offset,
     )
 
 
@@ -459,6 +463,7 @@ def pin_neg_key(bot, update):
         ],
         cache_time=3,
         is_personal=True,
+        next_offset=next_offset,
     )
 
 
@@ -503,6 +508,7 @@ def process_pinning_neg_key_to_key_show_list(bot, update):
         ],
         cache_time=3,
         is_personal=True,
+        next_offset=next_offset,
     )
 
 
@@ -563,6 +569,7 @@ def prepare_key_selection_for_neg(bot, update):
         ],
         cache_time=3,
         is_personal=True,
+        next_offset=next_offset,
     )
 
 
@@ -606,6 +613,7 @@ def prepare_neg_key_list(bot, update):
         ],
         cache_time=3,
         is_personal=True,
+        next_offset=next_offset,
     )
 
 
@@ -654,6 +662,7 @@ def negative_key_deletion_choose_keyword(bot, update):
         ],
         cache_time=3,
         is_personal=True,
+        next_offset=next_offset,
     )
 
 
