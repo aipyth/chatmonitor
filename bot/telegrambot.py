@@ -216,6 +216,7 @@ def process_neg_key(bot, update):
 # Pin key
 
 def pin_key_to_chat(bot, update):
+    logger.debug("Processing in function pin_key_to_chat")
     user = User.objects.get(chat_id=update.effective_user.id)
 
     objects = user.get_keywords_info()
@@ -242,6 +243,7 @@ def pin_key_to_chat(bot, update):
         is_personal=True,
         next_offset=next_offset,
     )
+    logger.debug("Processing finished in function pin_key_to_chat")
 
 
 def process_pinning_key(bot, update):
@@ -550,6 +552,7 @@ def process_pinning_neg_key_to_key(bot, update):
 # Unpin negative key
 
 def prepare_key_selection_for_neg(bot, update):
+    logger.debug("Processing in function prepare_key_selection_for_neg")
     user = User.objects.get(chat_id=update.effective_user.id)
 
     objects = user.keywords.all()
@@ -571,9 +574,11 @@ def prepare_key_selection_for_neg(bot, update):
         is_personal=True,
         next_offset=next_offset,
     )
+    logger.debug("Processing finished in function prepare_key_selection_for_neg")
 
 
 def prepare_neg_key_selection(bot, update):
+    logger.debug("Processing in function prepare_neg_key_selection")
     user = User.objects.get(chat_id=update.effective_user.id)
 
     key = re.match(text.re.unpin_neg_key, update.message.text).group(1)
@@ -584,9 +589,11 @@ def prepare_neg_key_selection(bot, update):
         [telegram.InlineKeyboardButton(text=text.buttons.unpin_neg_key.unpin, switch_inline_query_current_chat=text.buttons.unpin_neg_key.choose_key.format(key=key))]
     ])
     bot.sendMessage(user.chat_id, text=text.actions_text.unpin_neg_key.choose_key, reply_markup=keyboard)
+    logger.debug("Processing finished in function prepare_neg_key_selection")
 
 
 def prepare_neg_key_list(bot, update):
+    logger.debug("Processing in function prepare_neg_key_list")
     user = User.objects.get(chat_id=update.effective_user.id)
 
     key_id = re.match(text.re.unpin_neg_key_choose_key, update.inline_query.query).group(1)
@@ -615,9 +622,11 @@ def prepare_neg_key_list(bot, update):
         is_personal=True,
         next_offset=next_offset,
     )
+    logger.debug("Processing finished in function prepare_neg_key_list")
 
 
 def unpin_key_from_chat(bot, update):
+    logger.debug("Processing in function unpin_key_from_chat")
     user = User.objects.get(chat_id=update.effective_user.id)
 
     match = re.match(text.re.unpin_neg_key_from_key, update.message.text)
@@ -635,7 +644,8 @@ def unpin_key_from_chat(bot, update):
             return
         key.negativekeyword.remove(kw)
 
-    bot.sendMessage(user.chat_id, text=random.choice(text.actions_text.unpin_neg_key.success)) 
+    bot.sendMessage(user.chat_id, text=random.choice(text.actions_text.unpin_neg_key.success))
+    logger.debug("Processing function in function unpin_key_from_chat")
 
 
 
