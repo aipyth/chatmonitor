@@ -61,6 +61,9 @@ def start(bot, update):
         username = username if update.message.from_user.username else ''
         user = User(chat_id=update.message.chat.id, name=update.message.from_user.full_name, username=username)
         user.save()
+        logger.debug("New user created: `{}`".format(user))
+    else:
+        logger.debug("User `{}` already exist.".format(user))
     
     # Looking for common chats with the user
     for chat in Chat.objects.all():
