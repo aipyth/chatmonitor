@@ -58,7 +58,7 @@ def start(bot, update):
     "Start conversation with bot"
     user = User.objects.get_or_none(chat_id=update.message.chat.id)
     if not user:
-        username = username if update.message.from_user.username else ''
+        username = update.message.from_user.username if update.message.from_user.username else ''
         user = User(chat_id=update.message.chat.id, name=update.message.from_user.full_name, username=username)
         user.save()
         logger.debug("New user created: `{}`".format(user))
