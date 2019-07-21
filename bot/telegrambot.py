@@ -814,12 +814,12 @@ def handle_group_message(bot, update):
 
     # If theres no keywords - skip
     if not keywords:
-        logger.debug("Skipped message {}:{}".format(update.message.message_id, update.message.text))
+        logger.debug("Skipped message {}:{}:[{}]".format(update.message.message_id, update.message.text, keywords))
         return
 
     # Just logging stuff
     keys = ', '.join([kw.key for kw in keywords])
-    logger.debug("Found keywords ({}) in {}:{}".format(keys, update.message.message_id, update.message.text))
+    logger.debug("Found keywords ({}) in {}:{}".format(keys, update.message.message_id, update.message.text.replace('\n', ' ')))
 
     # Resending messages to users
     users = list(set([kw.user for kw in keywords]))
