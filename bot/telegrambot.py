@@ -196,7 +196,7 @@ def add_key(bot, update):
     # Store unique-in-user-scope keys
     keys = set(update.message.text.split('\n'))
     for k in keys:
-        if not Keyword.objects.filter(key=k, user=user):
+        if not Keyword.objects.filter(key=k, user=user) and k:
             key = Keyword(key=k, user=user)
             key.save()
 
@@ -222,7 +222,7 @@ def add_negative_key(bot, update):
     # Store unique-in-user-scope keys
     keys = set(update.message.text.split('\n'))
     for k in keys:
-        if not NegativeKeyword.objects.filter(key=k, user=user):
+        if not NegativeKeyword.objects.filter(key=k, user=user) and k:
             nkey = NegativeKeyword(key=k, user=user)
             nkey.save()
 
@@ -800,10 +800,11 @@ def handle_group_message(bot, update):
     # Define a list where keywords that occur in message will be stored
     keywords = []
     # Try to find them, man!
-    logger.debug("message - {}".format(update.message.text))
+    # logger.debug("message - {}".format(update.message.text))
     for keyword in chat.keywords.all():
         state = True
-        logger.debug("key {} - {}".format(keyword.key.lower(), keyword.key.lower() in update.message.text.lower()))
+        if not keyword.key: continue
+        # logger.debug("key {} - {}".format(keyword.key.lower(), keyword.key.lower() in update.message.text.lower()))
         if keyword.key.lower() in update.message.text.lower():
             # Also don't forget about negative keywords
             for nkey in keyword.negativekeyword.all():
