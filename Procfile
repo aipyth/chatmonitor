@@ -1,3 +1,3 @@
 release: python manage.py migrate
 web: gunicorn chatmonitor.wsgi --workers=1
-worker: celery -A bot.tasks.app --loglevel=info
+worker: celery -A chatmonitor.celery.app --loglevel=info
