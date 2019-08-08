@@ -2,6 +2,9 @@ import os
 from celery import Celery
 from django_telegrambot.apps import DjangoTelegramBot
 from .models import Chat, Keyword, NegativeKeyword, User
+from django.conf import settings
+
+settings.configure()
 
 broker = os.environ.get('REDIS_URL', 'redis://')
 
@@ -15,6 +18,7 @@ app.conf.update(
 
 bot = DjangoTelegramBot.get_bot()
 
+@app.task
 def check_message_for_keywords(chat_id, message_id, text):
 
     chat = Chat.objects.get(chat_id=chat_id)
