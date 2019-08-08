@@ -1,7 +1,7 @@
 from __future__ import absolute_import, unicode_literals
 from celery import shared_task
 from django_telegrambot.apps import DjangoTelegramBot
-from .models import Chat, Keyword, NegativeKeyword, User
+from .models import Chat, Keyword, NegativeKeyword
 
 # os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'chatmonitor.settings')
 #

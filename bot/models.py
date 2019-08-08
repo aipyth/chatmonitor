@@ -58,7 +58,7 @@ class Chat(models.Model):
         active = self.relation_set.filter(user=user)[0].active
         return "{} {}".format(self.title, '☑️' if active else '❎')
 
-    
+
     def get_keys(self, user):
         return ' | '.join([kw.key for kw in self.keywords.filter(user=user)])
 
@@ -82,12 +82,12 @@ class Keyword(models.Model):
     def __str__(self):
         return "'{}' by {}".format(self.key, self.user)
 
-    
+
     def prepare_description(self):
         chats = self.chats.all()[:10]
         return ', '.join(['{}'.format(chat.title) for chat in chats])
 
-    
+
     def nkeys_description(self):
         return ', '.join([nkey.key for nkey in self.negativekeyword.all()[:10]])
 
@@ -104,6 +104,6 @@ class NegativeKeyword(models.Model):
     def __str__(self):
         return "'{}' by {}".format(self.key, self.user)
 
-    
+
     def prepare_description(self):
         return ', '.join(['{}'.format(kw.key) for kw in self.keywords.all()[:10]])
