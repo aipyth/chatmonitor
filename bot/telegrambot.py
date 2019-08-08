@@ -791,14 +791,18 @@ def switch_chat(bot, update):
 
 def handle_group_message(bot, update):
     "Handle group messages"
-    if not update.message.text:
-        return
-    else:
+    if update.message.text:
         tasks.check_message_for_keywords.delay(
-            update.message.chat.id,
-            update.message.message_id,
-            update.message.text,
-            )
+        update.message.chat.id,
+        update.message.message_id,
+        update.message.text,
+        )
+    elif update.message.caption:
+        tasks.check_message_for_keywords.delay(
+        update.message.chat.id,
+        update.message.message_id,
+        update.message.caption,
+        )
     # chat_id = update.message.chat.id
     # chat = Chat.objects.get(chat_id=chat_id)
     #

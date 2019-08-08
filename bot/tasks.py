@@ -1,9 +1,7 @@
 from __future__ import absolute_import, unicode_literals
 
-import json
 import logging
 import os
-import urllib.request
 
 from celery import shared_task
 
@@ -15,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 TOKEN = os.environ.get('BOT_TOKEN')
 
+import requests
+
 def forward_message(chat_id, from_chat_id, message_id):
     METHOD = 'forwardMessage'
     url = "https://api.telegram.org/bot{}/{}".format(TOKEN, METHOD)
@@ -24,12 +24,7 @@ def forward_message(chat_id, from_chat_id, message_id):
         'message_id': message_id,
     }
 
-    req = urllib.request.Request(url)
-    req.add_header('Content-Type', 'application/json; charset=utf-8')
-    jsondata = json.dumps(body)
-    jsondataasbytes = jsondata.encode('utf-8')
-    req.add_header('Content-Length', len(jsondataasbytes))
-    response = urllib.request.urlopen(req, jsondataasbytes)
+    requests.post(url, json=body)
 
 
 @shared_task
