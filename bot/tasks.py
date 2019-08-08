@@ -14,6 +14,8 @@ from .models import Chat, Keyword, NegativeKeyword, User
 #     result_serializer='json',
 #     enable_utc=True,
 # )
+import logging
+logger = logging.getLogger(__name__)
 
 bot = DjangoTelegramBot.get_bot()
 
