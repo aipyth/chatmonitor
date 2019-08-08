@@ -2,9 +2,8 @@ import os
 from celery import Celery
 from django_telegrambot.apps import DjangoTelegramBot
 from .models import Chat, Keyword, NegativeKeyword, User
-from django.conf import settings
 
-settings.configure()
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'chatmonitor.settings')
 
 broker = os.environ.get('REDIS_URL', 'redis://')
 
