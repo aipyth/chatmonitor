@@ -16,6 +16,7 @@ from telegram.ext import (CallbackQueryHandler, CommandHandler,
 from .bot_filters import GroupFilters
 from .models import Chat, Keyword, NegativeKeyword, User
 from . import utils
+from . import tasks
 
 # Config logging
 debug = os.environ.get('DEBUG', 0)
@@ -64,7 +65,7 @@ def start(bot, update):
         logger.debug("New user created: `{}`".format(user))
     else:
         logger.debug("User `{}` already exist.".format(user))
-    
+
     # Looking for common chats with the user
     for chat in Chat.objects.all():
         try:
@@ -124,7 +125,7 @@ def new_chat_members(bot, update):
         return
 
     chat = Chat.objects.get_or_none(chat_id=update.message.chat.id)
-    
+
     for member in update.message.new_chat_members:
         # If the bot is added to the chat, then...
         if member.username == bot.username:
@@ -169,7 +170,7 @@ def left_chat_member(bot, update):
     chat = Chat.objects.get(chat_id=update.message.chat.id)
     # If bot was kicked or whatever!
     if update.message.left_chat_member.username == bot.username:
-        
+
         chat.bot_in_chat = False
         chat.save()
     # If any other user was kicked delete this chat from his list
@@ -268,7 +269,7 @@ def get_keys_for_pinning(bot, update):
         next_offset=next_offset,
     )
     logger.debug("Processing finished in function get_keys_for_pinning")
- 
+
 
 def get_chat_list_button_for_pinning_key(bot, update):
     "Shows a message with button to switch inline query with available chats on"
@@ -319,7 +320,7 @@ def pin_key_to_chat(bot, update):
     match = re.match(text.re.pin_key_to_chat, update.message.text)
     chat_id = match.group(1)
     key = match.group(2)
-    
+
     chat = Chat.objects.get(id=chat_id)
     if key == text.actions.pin_key.all_keys:
         utils.pin_all_to_chat(user, chat)
@@ -333,7 +334,7 @@ def pin_key_to_chat(bot, update):
             return
         chat.keywords.add(kw)
 
-    bot.sendMessage(user.chat_id, text=random.choice(text.actions.pin_key.success)) 
+    bot.sendMessage(user.chat_id, text=random.choice(text.actions.pin_key.success))
 
 
 
@@ -431,7 +432,7 @@ def unpin_key_from_chat(bot, update):
             return
         chat.keywords.remove(kw)
 
-    bot.sendMessage(user.chat_id, text=random.choice(text.actions.unpin_key.success)) 
+    bot.sendMessage(user.chat_id, text=random.choice(text.actions.unpin_key.success))
 
 
 
@@ -537,7 +538,7 @@ def get_keys_list_for_pinning_negative_key(bot, update):
     offset = 1 if not update.inline_query.offset else update.inline_query.offset
     paginator = Paginator(objects, 40)
     keywords = paginator.page(int(offset))
-    next_offset = str(keywords.next_page_number()) if keywords.has_next() else ''    
+    next_offset = str(keywords.next_page_number()) if keywords.has_next() else ''
 
     update.inline_query.answer(
         results=[
@@ -567,8 +568,8 @@ def pin_negative_key_to_key(bot, update):
     match = re.match(text.re.pin_key_to_key, update.message.text)
     key_id = match.group(1)
     nkey = match.group(2)
-    
-    
+
+
     if nkey == text.actions.pin_neg_key.all_keys:
         if int(key_id) == 0:
             utils.pin_all_negative_to_all(user)
@@ -583,7 +584,7 @@ def pin_negative_key_to_key(bot, update):
     else:
         try:
             kw = user.negativekeyword.filter(key=nkey)[0]
-        except IndexError: 
+        except IndexError:
             logger.debug("No objects for negative key {}. Pinning declined.".format(nkey))
             return
         if int(key_id) == 0:
@@ -594,7 +595,7 @@ def pin_negative_key_to_key(bot, update):
             key = Keyword.objects.get(id=key_id)
             key.negativekeyword.add(kw)
 
-    bot.sendMessage(user.chat_id, text=random.choice(text.actions.pin_neg_key.success)) 
+    bot.sendMessage(user.chat_id, text=random.choice(text.actions.pin_neg_key.success))
 
 
 
@@ -608,7 +609,7 @@ def get_key_list_for_unpinning_negative_key(bot, update):
     offset = 1 if not update.inline_query.offset else update.inline_query.offset
     paginator = Paginator(objects, 40)
     keywords = paginator.page(int(offset))
-    next_offset = str(keywords.next_page_number()) if keywords.has_next() else '' 
+    next_offset = str(keywords.next_page_number()) if keywords.has_next() else ''
 
     update.inline_query.answer(
         results=[
@@ -678,7 +679,7 @@ def unpin_negative_key_from_key(bot, update):
     match = re.match(text.re.unpin_neg_key_from_key, update.message.text)
     key_id = match.group(1)
     nkey = match.group(2)
-    
+
     key = Keyword.objects.get(id=key_id)
     if nkey == text.actions.unpin_neg_key.all_keys:
         for kw in key.negativekeyword.filter(user=user):
@@ -790,45 +791,53 @@ def switch_chat(bot, update):
 
 def handle_group_message(bot, update):
     "Handle group messages"
-    chat_id = update.message.chat.id
-    chat = Chat.objects.get(chat_id=chat_id)
-
-    # If there is no text - skip
     if not update.message.text:
         return
-
-    # Define a list where keywords that occur in message will be stored
-    keywords = []
-    # Try to find them, man!
-    # logger.debug("message - {}".format(update.message.text))
-    for keyword in chat.keywords.all():
-        state = True
-        if not keyword.key: continue
-        # logger.debug("key {} - {}".format(keyword.key.lower(), keyword.key.lower() in update.message.text.lower()))
-        if keyword.key.lower() in update.message.text.lower():
-            # Also don't forget about negative keywords
-            for nkey in keyword.negativekeyword.all():
-                if nkey.key in update.message.text:
-                    state = False
-            if state:
-                relation = keyword.user.relation_set.filter(chat=chat)[0]
-                if relation.active:
-                    keywords.append(keyword)
-
-    # If theres no keywords - skip
-    if not keywords:
-        logger.debug("Skipped message {}:{}:[{}]".format(update.message.message_id, update.message.text, keywords))
-        return
-
-    # Just logging stuff
-    keys = ', '.join([kw.key for kw in keywords])
-    logger.debug("Found keywords ({}) in {}:{}".format(keys, update.message.message_id, update.message.text.replace('\n', ' ')))
-
-    # Resending messages to users
-    users = list(set([kw.user for kw in keywords]))
-    for user in users:
-        logger.debug("Sending message {} to {}".format(update.message.message_id, user.chat_id))
-        update.message.forward(user.chat_id)
+    else:
+        tasks.check_message_for_keywords.delay(
+            update.message.chat.id,
+            update.message.id,
+            update.message.text,
+            )
+    # chat_id = update.message.chat.id
+    # chat = Chat.objects.get(chat_id=chat_id)
+    #
+    # # If there is no text - skip
+    # if not update.message.text:
+    #     return
+    #
+    # # Define a list where keywords that occur in message will be stored
+    # keywords = []
+    # # Try to find them, man!
+    # # logger.debug("message - {}".format(update.message.text))
+    # for keyword in chat.keywords.all():
+    #     state = True
+    #     if not keyword.key: continue
+    #     # logger.debug("key {} - {}".format(keyword.key.lower(), keyword.key.lower() in update.message.text.lower()))
+    #     if keyword.key.lower() in update.message.text.lower():
+    #         # Also don't forget about negative keywords
+    #         for nkey in keyword.negativekeyword.all():
+    #             if nkey.key in update.message.text:
+    #                 state = False
+    #         if state:
+    #             relation = keyword.user.relation_set.filter(chat=chat)[0]
+    #             if relation.active:
+    #                 keywords.append(keyword)
+    #
+    # # If theres no keywords - skip
+    # if not keywords:
+    #     logger.debug("Skipped message {}:{}:[{}]".format(update.message.message_id, update.message.text, keywords))
+    #     return
+    #
+    # # Just logging stuff
+    # keys = ', '.join([kw.key for kw in keywords])
+    # logger.debug("Found keywords ({}) in {}:{}".format(keys, update.message.message_id, update.message.text.replace('\n', ' ')))
+    #
+    # # Resending messages to users
+    # users = list(set([kw.user for kw in keywords]))
+    # for user in users:
+    #     logger.debug("Sending message {} to {}".format(update.message.message_id, user.chat_id))
+    #     update.message.forward(user.chat_id)
 
 
 
