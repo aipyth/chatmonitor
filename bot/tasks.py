@@ -1,23 +1,23 @@
-import os
-from celery import Celery
+from __future__ import absolute_import, unicode_literals
+from celery import shared_task
 from django_telegrambot.apps import DjangoTelegramBot
 from .models import Chat, Keyword, NegativeKeyword, User
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'chatmonitor.settings')
-
-broker = os.environ.get('REDIS_URL', 'redis://')
-
-app = Celery('tasks', broker=broker)
-app.conf.update(
-    task_serializer='json',
-    accept_content=['json'],  # Ignore other content
-    result_serializer='json',
-    enable_utc=True,
-)
+# os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'chatmonitor.settings')
+#
+# broker = os.environ.get('REDIS_URL', 'redis://')
+#
+# app = Celery('tasks', broker=broker)
+# app.conf.update(
+#     task_serializer='json',
+#     accept_content=['json'],  # Ignore other content
+#     result_serializer='json',
+#     enable_utc=True,
+# )
 
 bot = DjangoTelegramBot.get_bot()
 
-@app.task
+@shared_task
 def check_message_for_keywords(chat_id, message_id, text):
 
     chat = Chat.objects.get(chat_id=chat_id)
