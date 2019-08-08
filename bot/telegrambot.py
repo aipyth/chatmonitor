@@ -796,7 +796,7 @@ def handle_group_message(bot, update):
     else:
         tasks.check_message_for_keywords.delay(
             update.message.chat.id,
-            update.message.id,
+            update.message.message_id,
             update.message.text,
             )
     # chat_id = update.message.chat.id
