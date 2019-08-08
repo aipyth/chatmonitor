@@ -1,22 +1,22 @@
 import json
 import logging
+import os
 import random
 import re
 import uuid
-import os
 from collections import namedtuple
 
-import telegram
 from django.core.paginator import Paginator
+
+import telegram
 from django_telegrambot.apps import DjangoTelegramBot
 from telegram.ext import (CallbackQueryHandler, CommandHandler,
                           ConversationHandler, Filters, InlineQueryHandler,
                           MessageHandler, RegexHandler)
 
+from . import tasks, utils
 from .bot_filters import GroupFilters
 from .models import Chat, Keyword, NegativeKeyword, User
-from . import utils
-from . import tasks
 
 # Config logging
 debug = os.environ.get('DEBUG', 0)
@@ -772,9 +772,9 @@ def switch_chat(bot, update):
             relation.save()
 
             if relation.active:
-                update.callback_query.answer(text=text.actions.chats.switch_success + ' ' + text.actions.chats.switch_active)
-            else:
                 update.callback_query.answer(text=text.actions.chats.switch_success + ' ' + text.actions.chats.switch_unactive)
+            else:
+                update.callback_query.answer(text=text.actions.chats.switch_success + ' ' + text.actions.chats.switch_active)
 
             keyboard = telegram.InlineKeyboardMarkup([
                 [telegram.InlineKeyboardButton(text=chat.represent(user), callback_data=text.buttons.chats.switch.format(chat=chat.id))] for chat in user.chats.all()

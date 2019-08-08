@@ -1,8 +1,6 @@
 from __future__ import absolute_import, unicode_literals
-from celery import shared_task
-from django_telegrambot.apps import DjangoTelegramBot
-from .models import Chat, Keyword, NegativeKeyword
 
+import json
 # os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'chatmonitor.settings')
 #
 # broker = os.environ.get('REDIS_URL', 'redis://')
@@ -15,11 +13,39 @@ from .models import Chat, Keyword, NegativeKeyword
 #     enable_utc=True,
 # )
 import logging
+import os
+import urllib.request
+
+from celery import shared_task
+
+from .models import Chat, Keyword, NegativeKeyword
+
+# from django_telegrambot.apps import DjangoTelegramBot
+
+
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
-bot = DjangoTelegramBot.get_bot()
+# bot = DjangoTelegramBot.get_bot()
+TOKEN = os.environ.get('BOT_TOKEN')
+
+def forward_message(chat_id, from_chat_id, message_id):
+    METHOD = 'forwardMessage'
+    url = "https://api.telegram.org/bot{}/{}".format(TOKEN, METHOD)
+    body = {
+        'chat_id': chat_id,
+        'from_chat_id': from_chat_id,
+        'message_id': message_id,
+    }
+
+    req = urllib.request.Request(url)
+    req.add_header('Content-Type', 'application/json; charset=utf-8')
+    jsondata = json.dumps(body)
+    jsondataasbytes = jsondata.encode('utf-8')
+    req.add_header('Content-Length', len(jsondataasbytes))
+    response = urllib.request.urlopen(req, jsondataasbytes)
+
 
 @shared_task
 def check_message_for_keywords(chat_id, message_id, text):
@@ -58,4 +84,5 @@ def check_message_for_keywords(chat_id, message_id, text):
     for user in users:
         logger.info("Sending message {} to {}".format(message_id, user.chat_id))
         # update.message.forward(user.chat_id)
-        bot.forwardMessage(user.chat_id, chat_id, message_id)
+        # bot.forwardMessage(user.chat_id, chat_id, message_id)
+        forward_message(user.chat_id, chat_id, message_id)
