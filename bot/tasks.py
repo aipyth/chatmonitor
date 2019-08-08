@@ -15,13 +15,15 @@ from .models import Chat, Keyword, NegativeKeyword, User
 #     enable_utc=True,
 # )
 import logging
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
 
 bot = DjangoTelegramBot.get_bot()
 
 @shared_task
 def check_message_for_keywords(chat_id, message_id, text):
-
+    logger.debug("Processing message \"{}\" from {}".format(text, chat_id))
     chat = Chat.objects.get(chat_id=chat_id)
 
     # Define a list where keywords that occur in message will be stored
