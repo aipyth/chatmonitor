@@ -1,17 +1,6 @@
 from __future__ import absolute_import, unicode_literals
 
 import json
-# os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'chatmonitor.settings')
-#
-# broker = os.environ.get('REDIS_URL', 'redis://')
-#
-# app = Celery('tasks', broker=broker)
-# app.conf.update(
-#     task_serializer='json',
-#     accept_content=['json'],  # Ignore other content
-#     result_serializer='json',
-#     enable_utc=True,
-# )
 import logging
 import os
 import urllib.request
@@ -20,14 +9,10 @@ from celery import shared_task
 
 from .models import Chat, Keyword, NegativeKeyword
 
-# from django_telegrambot.apps import DjangoTelegramBot
-
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-
-# bot = DjangoTelegramBot.get_bot()
 TOKEN = os.environ.get('BOT_TOKEN')
 
 def forward_message(chat_id, from_chat_id, message_id):
