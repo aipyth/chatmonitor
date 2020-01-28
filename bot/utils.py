@@ -61,3 +61,21 @@ def unpin_all_negative_from_one(user, key):
     for kw in key.negativekeyword.filter(user=user):
         key.negativekeyword.remove(kw)
     logger.debug("(unpin_all_negative_from_one) finished")
+
+
+@threaded
+def switch_group_on(group):
+    logger.debug("(switch_group_on) started")
+    for key in group.keys.all():
+        key.state = True
+        key.save()
+    logger.debug("(switch_group_on) finished")
+
+
+@threaded
+def switch_group_off(group):
+    logger.debug("(switch_group_off) started")
+    for key in group.keys.all():
+        key.state = False
+        key.save()
+    logger.debug("(switch_group_off) finished")

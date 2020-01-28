@@ -36,10 +36,10 @@ def check_message_for_keywords(chat_id, message_id, text):
     keywords = []
     # Try to find them, man!
     # logger.debug("message - {}".format(update.message.text))
-    for keyword in chat.keywords.all():
+    for keyword in chat.keywords.filter(state=True):
         state = True
         if not keyword.key: continue
-        # logger.debug("key {} - {}".format(keyword.key.lower(), keyword.key.lower() in update.message.text.lower()))
+        # logger.debug("key {} - {}".format(keyword.key.lower(), keyword.key.lower() in text.lower()))
         if keyword.key.lower() in text.lower():
             # Also don't forget about negative keywords
             for nkey in keyword.negativekeyword.all():

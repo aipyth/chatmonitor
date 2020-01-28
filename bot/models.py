@@ -4,7 +4,6 @@ from django.core.exceptions import ObjectDoesNotExist
 from contextlib import suppress
 
 
-
 class LocalManager(models.Manager):
     def get_or_none(self, **kwargs):
         with suppress(ObjectDoesNotExist):
@@ -75,6 +74,7 @@ class Keyword(models.Model):
     chats = models.ManyToManyField(Chat, related_name='keywords')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='keywords')
     key = models.TextField()
+    state = models.BooleanField(default=True)
 
     objects = LocalManager()
 
@@ -114,12 +114,21 @@ class KeywordsGroup(models.Model):
     name = models.CharField(max_length=255)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='groups')
     keys = models.ManyToManyField(Keyword, related_name='groups')
+    state = models.BooleanField(default=True)
+
+    objects = LocalManager()
 
     def __str__(self):
         return "<KGroup {} by {}>".format(self.name, self.user)
 
+
+    def prepare_state(self):
+        return '✔️' if self.state else '❌'
+
+    
     def prepare_description(self):
         if self.keys.count() > 7:
-            return ', '.join(map(lambda x: x.key, self.keys.all()[:3])) + ' ... ' + ' ,'.join(map(lambda x: x.key, self.keys.all()[-1:-2]))
+            return ', '.join(map(lambda x: x.key, self.keys.all()[:3])) + ', ... , ' + ', '.join(map(lambda x: x.key, self.keys.order_by('-id')[:2]))
         else:
-            return ' ,'.join(map(lambda x: x.key, self.keys.all()))
+            return ', '.join(map(lambda x: x.key, self.keys.all()))
+
