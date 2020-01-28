@@ -107,3 +107,19 @@ class NegativeKeyword(models.Model):
 
     def prepare_description(self):
         return ', '.join(['{}'.format(kw.key) for kw in self.keywords.all()[:10]])
+
+
+
+class KeywordsGroup(models.Model):
+    name = models.CharField(max_length=255)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='groups')
+    keys = models.ManyToManyField(Keyword, related_name='groups')
+
+    def __str__(self):
+        return "<KGroup {} by {}>".format(self.name, self.user)
+
+    def prepare_description(self):
+        if self.keys.count() > 7:
+            return ', '.join(map(lambda x: x.key, self.keys.all()[:3])) + ' ... ' + ' ,'.join(map(lambda x: x.key, self.keys.all()[-1:-2]))
+        else:
+            return ' ,'.join(map(lambda x: x.key, self.keys.all()))

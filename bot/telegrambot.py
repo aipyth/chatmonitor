@@ -16,7 +16,7 @@ from telegram.ext import (CallbackQueryHandler, CommandHandler,
 
 from . import tasks, utils
 from .bot_filters import GroupFilters
-from .models import Chat, Keyword, NegativeKeyword, User
+from .models import Chat, Keyword, NegativeKeyword, User, KeywordsGroup
 
 # Config logging
 debug = os.environ.get('DEBUG', 0)
@@ -34,6 +34,7 @@ with open('bot/text.json', encoding='utf8') as file:
 # Keyboards
 
 menu_keyboard = telegram.InlineKeyboardMarkup([
+        # Keywords
         [telegram.InlineKeyboardButton(text=text.buttons.menu.add_key, callback_data=text.buttons.menu.add_key)],
 
         [telegram.InlineKeyboardButton(text=text.buttons.menu.pin_key_to_chat, switch_inline_query_current_chat=text.buttons.menu.pin_key_to_chat[:-2])],
@@ -42,6 +43,7 @@ menu_keyboard = telegram.InlineKeyboardMarkup([
 
         [telegram.InlineKeyboardButton(text=text.buttons.menu.delete_key, switch_inline_query_current_chat=text.buttons.menu.delete_key[:-2])],
 
+        # Negative Keywords
         [telegram.InlineKeyboardButton(text=text.buttons.menu.add_neg_key, callback_data=text.buttons.menu.add_neg_key)],
 
         [telegram.InlineKeyboardButton(text=text.buttons.menu.pin_neg_key, switch_inline_query_current_chat=text.buttons.menu.pin_neg_key[:-2])],
@@ -50,6 +52,12 @@ menu_keyboard = telegram.InlineKeyboardMarkup([
 
         [telegram.InlineKeyboardButton(text=text.buttons.menu.delete_neg_key, switch_inline_query_current_chat=text.buttons.menu.delete_neg_key[:-2])],
 
+        # Keywords' Groups
+        [telegram.InlineKeyboardButton(text=text.buttons.menu.create_group, callback_data=text.buttons.menu.create_group)],
+
+        [telegram.InlineKeyboardButton(text=text.buttons.menu.add_key_to_group, switch_inline_query_current_chat=text.buttons.menu.add_key_to_group)],
+
+        # Chat switcher
         [telegram.InlineKeyboardButton(text=text.buttons.menu.chat_monitor, callback_data=text.buttons.menu.chat_monitor)],
     ])
 
@@ -741,6 +749,100 @@ def delete_neg_key(bot, update):
 
 
 
+# Keywords' Groups
+
+# Create group
+def ask_keywords_group_name(bot, update):
+    "Ask a name for the new group"
+    bot.sendMessage(update.effective_message.chat.id, text=text.actions.create_group.ask_new_group)
+    return PROCESS_GROUP
+
+
+def create_new_group(bot, update):
+    "Process given name of the group and create it"
+    user = User.objects.get(chat_id=update.effective_user.id)
+
+    group = KeywordsGroup.objects.create(name=update.message.text, user=user)
+
+    bot.sendMessage(user.chat_id, text=text.actions.create_group.success)
+
+# add key to group
+def show_keys_list_for_adding_to_group(bot, update):
+    user = User.objects.get(chat_id=update.effective_user.id)
+
+    objects = user.keywords.all()
+    offset = 1 if not update.inline_query.offset else update.inline_query.offset
+    paginator = Paginator(objects, 40)
+    keywords = paginator.page(int(offset))
+    next_offset = str(keywords.next_page_number()) if keywords.has_next() else ''
+
+    update.inline_query.answer(
+        results=[
+            telegram.InlineQueryResultArticle(
+                id=uuid.uuid4(),
+                title=keyword.key,
+                description=keyword.prepare_description(),
+                input_message_content=telegram.InputTextMessageContent(message_text=text.actions.add_key_to_group.choose_key.format(keyword.key))
+            ) for keyword in keywords
+        ],
+        cache_time=3,
+        is_personal=True,
+        next_offset=next_offset,
+    )
+
+
+def get_button_to_show_keywords_groups(bot, update):
+    "Shows a message with button to switch inline query for picking a group"
+    user = User.objects.get(chat_id=update.effective_user.id)
+    key = re.match(text.re.choose_key_for_group, update.message.text).group(1)
+    update.message.delete()
+    keyboard = telegram.InlineKeyboardMarkup([
+        [telegram.InlineKeyboardButton(text=text.buttons.add_key_to_group.choose_group_button, switch_inline_query_current_chat=text.buttons.add_key_to_group.choose_group_pattern.format(key))]
+    ])
+    bot.sendMessage(user.chat_id, text=text.actions.add_key_to_group.choose_group, reply_markup=keyboard)
+
+
+def show_groups_for_adding_key(bot, update):
+    user = User.objects.get(chat_id=update.effective_user.id)
+
+    keyword = re.match(text.re.choose_group_to_key, update.inline_query.query).group(1)
+
+    objects = user.groups.all()
+    offset = 1 if not update.inline_query.offset else update.inline_query.offset
+    paginator = Paginator(objects, 40)
+    groups = paginator.page(int(offset))
+    next_offset = str(groups.next_page_number()) if groups.has_next() else ''
+
+    update.inline_query.answer(
+        results=[
+            telegram.InlineQueryResultArticle(
+                id=uuid.uuid4(),
+                title=group.name,
+                description=group.prepare_description(),
+                input_message_content=telegram.InputTextMessageContent(message_text=text.actions.add_key_to_group.add_key_to_group.format(group_id=group.id, key=keyword))
+            ) for group in groups
+        ],
+        cache_time=3,
+        is_personal=True,
+        next_offset=next_offset,
+    )
+
+
+def add_key_to_group(bot, update):
+    user = User.objects.get(chat_id=update.effective_user.id)
+
+    match = re.match(text.re.add_key_to_group, update.message.text)
+    group_id = match.group(1)
+    keyword = match.group(2)
+
+    key = Keyword.objects.get(key=keyword, user=user)
+    group = KeywordsGroup.objects.get(id=group_id)
+    group.keys.add(key)
+
+    update.message.delete()
+    bot.sendMessage(user.chat_id, text=text.actions.add_key_to_group.success)
+
+
 # Monitoring chat's activity
 
 def show_all_chats(bot, update):
@@ -851,6 +953,7 @@ def handle_group_message(bot, update):
 
 PROCESS_KEY = range(1)
 PROCESS_NEG_KEY = range(1)
+PROCESS_GROUP = range(1)
 
 def main():
     dp = DjangoTelegramBot.dispatcher
@@ -902,6 +1005,19 @@ def main():
         ]
     ))
 
+    # Create keywords' group
+    dp.add_handler(ConversationHandler(
+        allow_reentry=True,
+        entry_points=[
+            CommandHandler('creategroup', ask_keywords_group_name),
+            CallbackQueryHandler(callback=ask_keywords_group_name, pattern=text.buttons.menu.create_group),
+        ],
+        states={
+            PROCESS_GROUP: [MessageHandler(Filters.text, create_new_group)],
+        },
+        fallbacks=[MessageHandler(Filters.all, default_fallback)]
+    ))
+
     # Pin key to the chat through inline query
     dp.add_handler(InlineQueryHandler(callback=get_keys_for_pinning,pattern=text.buttons.menu.pin_key_to_chat[:-2]))
 
@@ -919,6 +1035,15 @@ def main():
     dp.add_handler(InlineQueryHandler(callback=get_keys_list_for_pinning_negative_key, pattern=text.re.choose_key_to_pin))
 
     dp.add_handler(RegexHandler(callback=pin_negative_key_to_key, pattern=text.re.pin_key_to_key))
+
+    # Add keyword to group
+    dp.add_handler(InlineQueryHandler(callback=show_keys_list_for_adding_to_group, pattern=text.buttons.menu.add_key_to_group))
+
+    dp.add_handler(RegexHandler(callback=get_button_to_show_keywords_groups, pattern=text.re.choose_key_for_group))
+
+    dp.add_handler(InlineQueryHandler(callback=show_groups_for_adding_key, pattern=text.re.choose_group_to_key))
+
+    dp.add_handler(RegexHandler(callback=add_key_to_group, pattern=text.re.add_key_to_group))
 
     # Unpin key from the chat
     dp.add_handler(InlineQueryHandler(callback=get_chat_list_for_unpinning_key, pattern=text.buttons.menu.unpin_key_from_chat[:-2]))
