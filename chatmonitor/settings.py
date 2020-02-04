@@ -166,7 +166,6 @@ LOGGING = {
 
 
 # import Bot Settings
-
 from bot.settings import *
 
 django_heroku.settings(locals())

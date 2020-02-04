@@ -35,28 +35,33 @@ with open('bot/text.json', encoding='utf8') as file:
 
 menu_keyboard = telegram.InlineKeyboardMarkup([
         # Keywords
+        # Add
         [telegram.InlineKeyboardButton(text=text.buttons.menu.add_key, callback_data=text.buttons.menu.add_key)],
-
+        # Pin key
         [telegram.InlineKeyboardButton(text=text.buttons.menu.pin_key_to_chat, switch_inline_query_current_chat=text.buttons.menu.pin_key_to_chat[:-2])],
-
+        # Unpin key
         [telegram.InlineKeyboardButton(text=text.buttons.menu.unpin_key_from_chat, switch_inline_query_current_chat=text.buttons.menu.unpin_key_from_chat[:-2])],
-
+        # Delete key
         [telegram.InlineKeyboardButton(text=text.buttons.menu.delete_key, switch_inline_query_current_chat=text.buttons.menu.delete_key[:-2])],
 
         # Negative Keywords
+        # Add
         [telegram.InlineKeyboardButton(text=text.buttons.menu.add_neg_key, callback_data=text.buttons.menu.add_neg_key)],
-
+        # Pin neg key
         [telegram.InlineKeyboardButton(text=text.buttons.menu.pin_neg_key, switch_inline_query_current_chat=text.buttons.menu.pin_neg_key[:-2])],
-
+        # Unpin neg key
         [telegram.InlineKeyboardButton(text=text.buttons.menu.unpin_neg_key, switch_inline_query_current_chat=text.buttons.menu.unpin_neg_key[:-2])],
-
+        # Delete neg key
         [telegram.InlineKeyboardButton(text=text.buttons.menu.delete_neg_key, switch_inline_query_current_chat=text.buttons.menu.delete_neg_key[:-2])],
 
         # Keywords' Groups
+        # Create
         [telegram.InlineKeyboardButton(text=text.buttons.menu.create_group, callback_data=text.buttons.menu.create_group)],
-
+        # Add
         [telegram.InlineKeyboardButton(text=text.buttons.menu.add_key_to_group, switch_inline_query_current_chat=text.buttons.menu.add_key_to_group)],
-
+        # Delete from group
+        [telegram.InlineKeyboardButton(text=text.buttons.menu.del_key_from_group, switch_inline_query_current_chat=text.buttons.menu.del_key_from_group)],
+        # Switch on\off
         [telegram.InlineKeyboardButton(text=text.buttons.menu.switch_groups, switch_inline_query_current_chat=text.buttons.menu.switch_groups)],
 
         # Chat switcher
@@ -850,6 +855,88 @@ def add_key_to_group(bot, update):
     bot.sendMessage(user.chat_id, text=text.actions.add_key_to_group.success)
 
 
+# Delete key from group
+def show_groups_for_del_key_from_group(bot, update):
+    "Show's groups list"
+    user = User.objects.get(chat_id=update.effective_user.id)
+
+    objects = user.groups.all()
+    offset = 1 if not update.inline_query.offset else update.inline_query.offset
+    paginator = Paginator(objects, 40)
+    groups = paginator.page(int(offset))
+    next_offset = str(groups.next_page_number()) if groups.has_next() else ''
+
+    update.inline_query.answer(
+        results=[
+            telegram.InlineQueryResultArticle(
+                id=uuid.uuid4(),
+                title=group.name + group.prepare_state(),
+                description=group.prepare_description(),
+                input_message_content=telegram.InputTextMessageContent(message_text=text.actions.del_key_from_group.choose_group.format(group.id))
+            ) for group in groups
+        ],
+        cache_time=3,
+        is_personal=True,
+        next_offset=next_offset,
+    )
+
+
+def get_button_to_show_keys_for_deletion_from_group(bot, update):
+    "Shows a message with button to switch inline query for picking a keyword for deletion from group"
+    user = User.objects.get(chat_id=update.effective_user.id)
+    group_id = re.match(text.re.choose_group_for_key_deletion, update.message.text).group(1)
+
+    update.message.delete()
+    keyboard = telegram.InlineKeyboardMarkup([
+        [telegram.InlineKeyboardButton(text=text.buttons.del_key_from_group.choose_key, switch_inline_query_current_chat=text.buttons.del_key_from_group.choose_key_pattern.format(group_id))]
+    ])
+    bot.sendMessage(user.chat_id, text=text.actions.del_key_from_group.choose_key, reply_markup=keyboard)
+
+
+def show_keys_for_deleting_from_group(bot, update):
+    "Show keys from group for deletion"
+    user = User.objects.get(chat_id=update.effective_user.id)
+
+    group_id = re.match(text.re.choose_key_for_key_from_group_deletion, update.inline_query.query).group(1)
+    group = KeywordsGroup.objects.get(id=group_id)
+
+    objects = user.keywords.filter(groups__in=[group])
+    offset = 1 if not update.inline_query.offset else update.inline_query.offset
+    paginator = Paginator(objects, 40)
+    keywords = paginator.page(int(offset))
+    next_offset = str(keywords.next_page_number()) if keywords.has_next() else ''
+
+    update.inline_query.answer(
+        results=[
+            telegram.InlineQueryResultArticle(
+                id=uuid.uuid4(),
+                title=keyword.key,
+                description=keyword.prepare_description(),
+                input_message_content=telegram.InputTextMessageContent(message_text=text.actions.del_key_from_group.del_key_from_group.format(group_id=group.id, key=keyword.key))
+            ) for keyword in keywords
+        ],
+        cache_time=3,
+        is_personal=True,
+        next_offset=next_offset,
+    )
+
+
+def delete_key_from_group(bot, update):
+    user = User.objects.get(chat_id=update.effective_user.id)
+
+    match = re.match(text.re.del_key_from_group, update.message.text)
+    group_id = match.group(1)
+    keyword = match.group(2)
+
+    group = KeywordsGroup.objects.get(id=group_id)
+    key = group.keys.get(key=keyword)
+    group.keys.remove(key)
+
+    # update.message.delete()
+    bot.sendMessage(user.chat_id, text=text.actions.del_key_from_group.success)
+
+
+
 # Switch groups on and off
 def show_groups_for_switching(bot, update):
     user = User.objects.get(chat_id=update.effective_user.id)
@@ -1115,6 +1202,15 @@ def main():
     dp.add_handler(InlineQueryHandler(callback=get_negative_keys_for_unpinning_negative_key, pattern=text.re.unpin_neg_key_choose_key))
 
     dp.add_handler(RegexHandler(callback=unpin_negative_key_from_key, pattern=text.re.unpin_neg_key_from_key))
+
+    # Delete key from group
+    dp.add_handler(InlineQueryHandler(callback=show_groups_for_del_key_from_group, pattern = text.buttons.menu.del_key_from_group))
+
+    dp.add_handler(RegexHandler(callback=get_button_to_show_keys_for_deletion_from_group, pattern=text.re.choose_group_for_key_deletion))
+
+    dp.add_handler(InlineQueryHandler(callback=show_keys_for_deleting_from_group, pattern=text.re.choose_key_for_key_from_group_deletion))
+
+    dp.add_handler(RegexHandler(callback=delete_key_from_group, pattern=text.re.del_key_from_group))
 
     # Delete key
     dp.add_handler(InlineQueryHandler(callback=get_keys_list_for_deletion, pattern=text.buttons.menu.delete_key[:-2]))
