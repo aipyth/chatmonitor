@@ -5,7 +5,9 @@ import os
 
 from celery import shared_task
 
+from django.core.cache import cache
 from .models import Chat, Keyword, NegativeKeyword
+from . import utils
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -28,7 +30,7 @@ def forward_message(chat_id, from_chat_id, message_id):
 
 
 @shared_task
-def check_message_for_keywords(chat_id, message_id, text):
+def check_message_for_keywords(chat_id, message_id, text, user_id, time):
     logger.debug("Processing message \"{}\" from {}".format(text, chat_id))
     chat = Chat.objects.get(chat_id=chat_id)
 
@@ -53,11 +55,15 @@ def check_message_for_keywords(chat_id, message_id, text):
     # If theres no keywords - skip
     if not keywords:
         logger.info("Skipped message {}:{}:[{}]".format(message_id, text, keywords))
-        return
+        return False
 
     # Just logging stuff
     keys = ', '.join([kw.key for kw in keywords])
     logger.info("Found keywords ({}) in {}:{}".format(keys, message_id, text.replace('\n', ' ')))
+
+    if not utils.check_for_uniqueness(user_id, time, text):
+        logger.info("Skipped message {} due repeating".format(message_id))
+        return False
 
     # Resending messages to users
     users = list(set([kw.user for kw in keywords]))
@@ -66,3 +72,10 @@ def check_message_for_keywords(chat_id, message_id, text):
         # update.message.forward(user.chat_id)
         # bot.forwardMessage(user.chat_id, chat_id, message_id)
         forward_message(user.chat_id, chat_id, message_id)
+    return True
+
+
+@shared_task
+def flush_cache():
+    logger.info("Flushing Cache...")
+    cache.clear()

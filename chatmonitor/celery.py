@@ -16,6 +16,12 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 # Load task modules from all registered Django app configs.
 app.autodiscover_tasks()
 
+app.conf.beat_schedule = {
+    'add-every-12-hors': {
+        'task': 'bot.tasks.flush_cache',
+        'schedule': 43200.0
+    },
+}
 
 @app.task(bind=True)
 def debug_task(self):

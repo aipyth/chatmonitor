@@ -1038,12 +1038,16 @@ def handle_group_message(bot, update):
         update.message.chat.id,
         update.message.message_id,
         update.message.text,
+        str(update.message.from_user.id),
+        int(update.message.date.timestamp()),
         )
     elif update.message.caption:
         tasks.check_message_for_keywords.delay(
         update.message.chat.id,
         update.message.message_id,
         update.message.caption,
+        str(update.message.from_user.id),
+        int(update.message.date.timestamp()),
         )
     # chat_id = update.message.chat.id
     # chat = Chat.objects.get(chat_id=chat_id)
