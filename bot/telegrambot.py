@@ -66,6 +66,9 @@ menu_keyboard = telegram.InlineKeyboardMarkup([
 
         # Chat switcher
         [telegram.InlineKeyboardButton(text=text.buttons.menu.chat_monitor, callback_data=text.buttons.menu.chat_monitor)],
+
+        # Settings
+        [telegram.InlineKeyboardButton(text=text.buttons.menu.settings, callback_data=text.buttons.menu.settings)],
     ])
 
 
@@ -1028,6 +1031,32 @@ def switch_chat(bot, update):
 
 
 
+# Settings
+def show_settings(bot, update):
+    user = User.objects.get(chat_id=update.effective_user.id)
+
+    settings_keyboard = telegram.InlineKeyboardMarkup([
+        [telegram.InlineKeyboardButton(text=text.buttons.settings.debug_mode + ' ' + user.prepare_debug_state(), callback_data=text.buttons.settings.debug_mode)],
+    ])
+
+    update.callback_query.message.edit_text(text=text.actions.settings.debug_msg_text, reply_markup=settings_keyboard, parse_mode=telegram.ParseMode.MARKDOWN)
+
+
+def switch_debug_mode(bot, update):
+    user = User.objects.get(chat_id=update.effective_user.id)
+
+    if user.debug:
+        user.debug = False
+        user.save()
+        update.callback_query.answer(text.actions.settings.debug_off)
+    else:
+        user.debug = True
+        user.save()
+        update.callback_query.answer(text.actions.settings.debug_on)
+    settings_keyboard = telegram.InlineKeyboardMarkup([
+        [telegram.InlineKeyboardButton(text=text.buttons.settings.debug_mode + ' ' + user.prepare_debug_state(), callback_data=text.buttons.settings.debug_mode)],
+    ])
+    update.callback_query.edit_message_reply_markup(reply_markup=settings_keyboard)
 
 # Group messages
 
@@ -1049,51 +1078,11 @@ def handle_group_message(bot, update):
         str(update.message.from_user.id),
         int(update.message.date.timestamp()),
         )
-    # chat_id = update.message.chat.id
-    # chat = Chat.objects.get(chat_id=chat_id)
-    #
-    # # If there is no text - skip
-    # if not update.message.text:
-    #     return
-    #
-    # # Define a list where keywords that occur in message will be stored
-    # keywords = []
-    # # Try to find them, man!
-    # # logger.debug("message - {}".format(update.message.text))
-    # for keyword in chat.keywords.all():
-    #     state = True
-    #     if not keyword.key: continue
-    #     # logger.debug("key {} - {}".format(keyword.key.lower(), keyword.key.lower() in update.message.text.lower()))
-    #     if keyword.key.lower() in update.message.text.lower():
-    #         # Also don't forget about negative keywords
-    #         for nkey in keyword.negativekeyword.all():
-    #             if nkey.key in update.message.text:
-    #                 state = False
-    #         if state:
-    #             relation = keyword.user.relation_set.filter(chat=chat)[0]
-    #             if relation.active:
-    #                 keywords.append(keyword)
-    #
-    # # If theres no keywords - skip
-    # if not keywords:
-    #     logger.debug("Skipped message {}:{}:[{}]".format(update.message.message_id, update.message.text, keywords))
-    #     return
-    #
-    # # Just logging stuff
-    # keys = ', '.join([kw.key for kw in keywords])
-    # logger.debug("Found keywords ({}) in {}:{}".format(keys, update.message.message_id, update.message.text.replace('\n', ' ')))
-    #
-    # # Resending messages to users
-    # users = list(set([kw.user for kw in keywords]))
-    # for user in users:
-    #     logger.debug("Sending message {} to {}".format(update.message.message_id, user.chat_id))
-    #     update.message.forward(user.chat_id)
 
 
 
 
-
-
+# MAIN FUNCTION
 
 PROCESS_KEY = range(1)
 PROCESS_NEG_KEY = range(1)
@@ -1235,3 +1224,8 @@ def main():
     dp.add_handler(CallbackQueryHandler(callback=show_all_chats , pattern=text.buttons.menu.chat_monitor))
 
     dp.add_handler(CallbackQueryHandler(callback=switch_chat, pattern=text.re.switch))
+
+    # Settings
+    dp.add_handler(CallbackQueryHandler(callback=show_settings, pattern=text.buttons.menu.settings))
+
+    dp.add_handler(CallbackQueryHandler(callback=switch_debug_mode, pattern=text.buttons.settings.debug_mode))

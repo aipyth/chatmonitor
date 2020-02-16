@@ -15,12 +15,17 @@ class User(models.Model):
     chat_id = models.BigIntegerField(unique=True)
     name = models.CharField(max_length=1024)
     username = models.CharField(max_length=256, blank=True)
+    debug = models.BooleanField(default=False)
 
     objects = LocalManager()
 
 
     def __str__(self):
         return "{} {}".format(self.name, self.username)
+
+
+    def prepare_debug_state(self):
+        return '✔️' if self.debug else '❌'
 
 
 
@@ -125,10 +130,9 @@ class KeywordsGroup(models.Model):
     def prepare_state(self):
         return '✔️' if self.state else '❌'
 
-    
+
     def prepare_description(self):
         if self.keys.count() > 7:
             return ', '.join(map(lambda x: x.key, self.keys.all()[:3])) + ', ... , ' + ', '.join(map(lambda x: x.key, self.keys.order_by('-id')[:2]))
         else:
             return ', '.join(map(lambda x: x.key, self.keys.all()))
-
