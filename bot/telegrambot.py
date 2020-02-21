@@ -1,3 +1,4 @@
+import io
 import json
 import logging
 import os
@@ -1037,6 +1038,8 @@ def show_settings(bot, update):
 
     settings_keyboard = telegram.InlineKeyboardMarkup([
         [telegram.InlineKeyboardButton(text=text.buttons.settings.debug_mode + ' ' + user.prepare_debug_state(), callback_data=text.buttons.settings.debug_mode)],
+        [telegram.InlineKeyboardButton(text=text.buttons.settings.settings_up, callback_data=text.buttons.settings.settings_up)],
+        [telegram.InlineKeyboardButton(text=text.buttons.settings.settings_down, callback_data=text.buttons.settings.settings_down)],
     ])
 
     update.callback_query.message.edit_text(text=text.actions.settings.debug_msg_text, reply_markup=settings_keyboard, parse_mode=telegram.ParseMode.MARKDOWN)
@@ -1057,6 +1060,38 @@ def switch_debug_mode(bot, update):
         [telegram.InlineKeyboardButton(text=text.buttons.settings.debug_mode + ' ' + user.prepare_debug_state(), callback_data=text.buttons.settings.debug_mode)],
     ])
     update.callback_query.edit_message_reply_markup(reply_markup=settings_keyboard)
+
+
+def upload_settings_to_user(bot, update):
+    user = User.objects.get(chat_id=update.effective_user.id)
+
+    data = utils.gen_users_dataprint(user)
+    filename = str(uuid.uuid4()) + '.xml'
+    with open(filename, "w+") as data_file:
+        data_file.write(data)
+
+    bot.sendDocument(user.chat_id, document=open(filename, 'rb'), caption=text.actions.settings.settings_up_text, timeout=60)
+
+
+def ask_file_to_download_settings(bot, update):
+    bot.sendMessage(update.effective_user.id, text.actions.settings.settings_down_request)
+    return PROCESS_SETTINGS_FILE
+
+
+def process_settings_down_saving(bot, update):
+    user = User.objects.get(chat_id=update.effective_user.id)
+
+    file = update.message.document.get_file()
+    data_stream = io.BytesIO()
+    file.download(out=data_stream)
+    data = data_stream.getvalue().decode("utf-8")
+
+    repl_state = utils.replicate_users_dataprint(user, data)
+    if repl_state:
+        bot.sendMessage(user.chat_id, text.actions.settings.settings_down_text_success)
+    else:
+        bot.sendMessage(user.chat_id, "Ooops... Something gone wrong")
+    return -1
 
 # Group messages
 
@@ -1087,6 +1122,7 @@ def handle_group_message(bot, update):
 PROCESS_KEY = range(1)
 PROCESS_NEG_KEY = range(1)
 PROCESS_GROUP = range(1)
+PROCESS_SETTINGS_FILE = range(1)
 
 def main():
     dp = DjangoTelegramBot.dispatcher
@@ -1229,3 +1265,16 @@ def main():
     dp.add_handler(CallbackQueryHandler(callback=show_settings, pattern=text.buttons.menu.settings))
 
     dp.add_handler(CallbackQueryHandler(callback=switch_debug_mode, pattern=text.buttons.settings.debug_mode))
+
+    dp.add_handler(CallbackQueryHandler(callback=upload_settings_to_user, pattern=text.buttons.settings.settings_up))
+
+    dp.add_handler(ConversationHandler(
+        allow_reentry=True,
+        entry_points=[
+            CallbackQueryHandler(callback=ask_file_to_download_settings, pattern=text.buttons.settings.settings_down)
+        ],
+        states={
+            PROCESS_SETTINGS_FILE: [MessageHandler(Filters.document, process_settings_down_saving)],
+        },
+        fallbacks=[MessageHandler(Filters.all, default_fallback)]
+    ))

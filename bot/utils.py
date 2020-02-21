@@ -6,13 +6,59 @@ import base64
 from threading import Thread
 
 from django.core.cache import cache
-from .models import User, Chat, Keyword, NegativeKeyword
+from django.core import serializers
+from .models import User, Chat, Keyword, NegativeKeyword, KeywordsGroup
 
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+
+def gen_users_dataprint(user):
+    queryset = [*Keyword.objects.filter(user=user), *NegativeKeyword.objects.filter(user=user), *KeywordsGroup.objects.filter(user=user)]
+    data = serializers.serialize("xml", queryset)
+    return data
+
+
+def replicate_users_dataprint(user, data):
+    try:
+        deserialized_data = serializers.deserialize("xml", data)
+        for obj in deserialized_data:
+            if isinstance(obj.object, Keyword):
+                # if you wanna not to pin all keys
+                # to prev chats -- uncommend this
+                # obj.object.chats.clear()
+                if user.keywords.get_or_none(key=obj.object.key):
+                    continue
+                obj.object.user = user
+                obj.object.id = None
+                obj.save()
+            elif isinstance(obj.object, NegativeKeyword):
+                if user.negativekeyword.get_or_none(key=obj.object.key):
+                    continue
+                obj.object.user = user
+                obj.object.id = None
+                obj.save()
+                for keyword in obj.object.keywords.all():
+                    key_text = keyword.key
+                    real_keyword = user.keywords.get_or_none(key=key_text)
+                    obj.object.keywords.remove(keyword)
+                    if real_keyword:
+                        obj.object.keywords.add(real_keyword)
+            elif isinstance(obj.object, KeywordsGroup):
+                obj.object.user = user
+                obj.object.id = None
+                obj.save()
+                for keyword in obj.object.keys.all():
+                    key_text = keyword.key
+                    real_keyword = user.keywords.get_or_none(key=key_text)
+                    obj.object.keys.remove(keyword)
+                    if real_keyword:
+                        obj.object.keys.add(real_keyword)
+        return True
+    except:
+        return False
 
 
 def check_for_uniqueness(user:str, time:int, message:str):
