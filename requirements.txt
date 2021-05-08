@@ -29,6 +29,6 @@ sqlparse==0.3.0
 tdigest==0.5.2.2
 tornado==6.0.3
 uhashring==1.1
-urllib3==1.25.3
+urllib3==1.25.8
 vine==1.3.0
 whitenoise==4.1.3
