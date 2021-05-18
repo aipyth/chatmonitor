@@ -1,0 +1,40 @@
+version: "3.3"
+
+services:
+    postgres:
+        image: postgres:latest
+        environment:
+            POSTGRES_PASSWORD: postgres
+
+    redis:
+        image: redis:latest
+
+    web:
+        build: .
+        volumes: 
+            - ./:/app:Z
+        environment: 
+            DATABASE_PASSWORD: postgres
+            REDIS_URL: redis://redis:6379/0
+        env_file: 
+            - .env
+        command: sh -c "python manage.py migrate && gunicorn chatmonitor.wsgi --workers=1"
+        # command: sh -c "python manage.py migrate && python manage.py run"
+        depends_on:
+            - postgres
+            - redis
+
+    worker:
+        build: .
+        command: celery worker -A chatmonitor.celery.app -B --loglevel=info
+        volumes: 
+            - ./:/app:Z
+        environment: 
+            DATABASE_PASSWORD: postgres
+            REDIS_URL: redis://redis:6379/0
+        env_file: 
+            - .env
+        depends_on:
+            - postgres
+            - redis
+            

@@ -12,13 +12,14 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 from __future__ import absolute_import, unicode_literals
 import os
 
-import django_heroku
+
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Celery
 CELERY_BROKER_URL = os.environ.get('REDIS_URL')
+# CELERY_BROKER_URL = "redis://0.0.0.0:6379"
 CELERY_WORKER_CONCURRENCY = 5
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
@@ -27,12 +28,13 @@ CELERY_TASK_SERIALIZER = 'json'
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '!-fsr#)kl1f-cw-h#^qp(8)t*zjgn)9!gjxx0!0j(!9f@fff!)'
+SECRET_KEY = os.environ.get('SECRET_KEY', '!-fsr#)kl1f-cw-h#^qp(8)t*zjgn)9!gjxx0!0j(!9f@fff!)')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', '') == 'True'
 
-ALLOWED_HOSTS = [os.environ.get('HOSTNAME').split('//')[1]]
+# ALLOWED_HOSTS = [os.environ.get('HOSTNAME').split('//')[1]]
+ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOSTS').split(';')]
 
 
 # Application definition
@@ -83,9 +85,18 @@ WSGI_APPLICATION = 'chatmonitor.wsgi.application'
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 
 DATABASES = {
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.sqlite3',
+    #     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    # }
+
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': os.environ.get('DATABASE_NAME', 'postgres'),
+        'USER': os.environ.get('DATABASE_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DATABASE_PASSWORD', 'postgres'),
+        'HOST': os.environ.get('DATABASE_HOST', 'localhost'),
+        'PORT': os.environ.get('DATABASE_PORT', '5432'),
     }
 }
 
@@ -165,26 +176,33 @@ LOGGING = {
 }
 
 # MemCachier Cache
-servers = os.environ['MEMCACHIER_SERVERS']
-username = os.environ['MEMCACHIER_USERNAME']
-password = os.environ['MEMCACHIER_PASSWORD']
+# servers = os.environ['MEMCACHIER_SERVERS']
+# username = os.environ['MEMCACHIER_USERNAME']
+# password = os.environ['MEMCACHIER_PASSWORD']
+
+# CACHES = {
+#     'default': {
+#         # Use django-bmemcached
+#         'BACKEND': 'django_bmemcached.memcached.BMemcached',
+
+#         # TIMEOUT is not the connection timeout! It's the default expiration
+#         # timeout that should be applied to keys! Setting it to `None`
+#         # disables expiration.
+#         'TIMEOUT': None,
+
+#         'LOCATION': servers,
+
+#         'OPTIONS': {
+#             'username': username,
+#             'password': password,
+#         }
+#     }
+# }
 
 CACHES = {
     'default': {
-        # Use django-bmemcached
-        'BACKEND': 'django_bmemcached.memcached.BMemcached',
-
-        # TIMEOUT is not the connection timeout! It's the default expiration
-        # timeout that should be applied to keys! Setting it to `None`
-        # disables expiration.
-        'TIMEOUT': None,
-
-        'LOCATION': servers,
-
-        'OPTIONS': {
-            'username': username,
-            'password': password,
-        }
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': '/var/tmp/django_cache',
     }
 }
 
@@ -192,4 +210,6 @@ CACHES = {
 # import Bot Settings
 from bot.settings import *
 
-django_heroku.settings(locals())
+if os.environ.get('HEROKU', '') == 'true':
+    import django_heroku
+    django_heroku.settings(locals())
