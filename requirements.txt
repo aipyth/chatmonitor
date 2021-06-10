@@ -8,7 +8,7 @@ cffi==1.12.3
 chardet==3.0.4
 cryptography==2.7
 dj-database-url==0.5.0
-Django==2.2.3
+Django==2.2.24
 django-bmemcached==0.3.0
 django-heroku==0.3.1
 django-telegrambot==1.0.1
