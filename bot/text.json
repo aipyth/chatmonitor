@@ -59,7 +59,13 @@
         "settings": {
             "debug_mode": "Debug Mode",
             "settings_up": "Выгрузить настройки",
-            "settings_down": "Загрузить настройки"
+            "settings_down": "Загрузить настройки",
+
+            "delete_all_keywords": "Удалить все ключи",
+            "delete_yes": "Да",
+            "delete_no": "Нет",
+            "delete_yes_cb": "yes delete all keywords",
+            "delete_no_cb": "no delete all keywords"
         }
     },
 
@@ -181,7 +187,11 @@
             "debug_off": "Отключил Debug Mode",
             "settings_up_text": "Это файл с твоими данными: ключами, негативными ключами и группами. При загрузке существующие записи не будут удаляться, а будут добавлены только новые из файла.",
             "settings_down_request": "Отправь мне файл настроек",
-            "settings_down_text_success": "Всё ок! Я дополнил базу данными из файла"
+            "settings_down_text_success": "Всё ок! Я дополнил базу данными из файла",
+            "delete_all_keywords_confirm": "Вы уверены, что хотите удалить все ключи?",
+            "deleted": "Вы удалили все ключи",
+            "not_deleted": "Вы отменили удаление всех ключей"
+
         }
     },
 

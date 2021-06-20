@@ -27,6 +27,9 @@ class User(models.Model):
     def prepare_debug_state(self):
         return '✔️' if self.debug else '❌'
 
+    def delete_all_keywords(self):
+        self.keywords.all().delete()
+
 
 
 class Chat(models.Model):

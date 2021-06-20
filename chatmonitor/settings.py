@@ -34,7 +34,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', '!-fsr#)kl1f-cw-h#^qp(8)t*zjgn)9!gjxx0
 DEBUG = os.environ.get('DEBUG', '') == 'True'
 
 # ALLOWED_HOSTS = [os.environ.get('HOSTNAME').split('//')[1]]
-ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOSTS').split(';')]
+ALLOWED_HOSTS = [*os.environ.get('ALLOWED_HOSTS').split(';')]
 
 
 # Application definition

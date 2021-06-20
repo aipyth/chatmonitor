@@ -4,13 +4,13 @@ import os
 
 DJANGO_TELEGRAMBOT = {
 
-    'MODE' : 'WEBHOOK', #(Optional [str]) # The default value is WEBHOOK,
+    'MODE' : 'POLLING', #(Optional [str]) # The default value is WEBHOOK,
                         # otherwise you may use 'POLLING'
                         # NB: if use polling you must provide to run
                         # a management command that starts a worker
 
-    'WEBHOOK_SITE' : os.environ.get('HOSTNAME'),
-    'WEBHOOK_PREFIX' : '/prefix', # (Optional[str]) # If this value is specified,
+    # 'WEBHOOK_SITE' : os.environ.get('HOSTNAME'),
+    # 'WEBHOOK_PREFIX' : '/prefix', # (Optional[str]) # If this value is specified,
                                   # a prefix is added to webhook url
 
     #'WEBHOOK_CERTIFICATE' : 'cert.pem', # If your site use self-signed

@@ -1040,6 +1040,7 @@ def show_settings(bot, update):
         [telegram.InlineKeyboardButton(text=text.buttons.settings.debug_mode + ' ' + user.prepare_debug_state(), callback_data=text.buttons.settings.debug_mode)],
         [telegram.InlineKeyboardButton(text=text.buttons.settings.settings_up, callback_data=text.buttons.settings.settings_up)],
         [telegram.InlineKeyboardButton(text=text.buttons.settings.settings_down, callback_data=text.buttons.settings.settings_down)],
+        [telegram.InlineKeyboardButton(text=text.buttons.settings.delete_all_keywords, callback_data=text.buttons.settings.delete_all_keywords)],
     ])
 
     update.callback_query.message.edit_text(text=text.actions.settings.debug_msg_text, reply_markup=settings_keyboard, parse_mode=telegram.ParseMode.MARKDOWN)
@@ -1092,6 +1093,29 @@ def process_settings_down_saving(bot, update):
     else:
         bot.sendMessage(user.chat_id, "Ooops... Something gone wrong")
     return -1
+
+def delete_all_keys_confirm(bot, update):
+    # user = User.objects.get(chat_id=update.effective_user.id)
+    keyboard = telegram.InlineKeyboardMarkup([
+        [telegram.InlineKeyboardButton(text=text.buttons.settings.delete_yes, callback_data=text.buttons.settings.delete_yes_cb)],
+        [telegram.InlineKeyboardButton(text=text.buttons.settings.delete_no, callback_data=text.buttons.settings.delete_no_cb)],
+    ])
+    # bot.sendMessage(update.callback_query.from_user.id, text.actions.settings.delete_all_keywords_confirm, reply_markup=keyboard)
+    update.callback_query.message.edit_text(text.actions.settings.delete_all_keywords_confirm, reply_markup=keyboard)
+
+
+def delete_all_keys(bot, update):
+    user = User.objects.get(chat_id=update.effective_user.id)
+    update.callback_query.answer('Deleting...')
+    user.delete_all_keywords()
+    # update.callback_query.message.edit_reply_markup(none)
+    update.callback_query.message.edit_text(text.actions.settings.deleted, reply_markup=None)
+
+def delete_not_keywords(bot, update):
+    update.callback_query.answer('Canceled')
+    # update.callback_query.message.edit_reply_markup(none)
+    update.callback_query.message.edit_text(text.actions.settings.not_deleted, reply_markup=None)
+
 
 # Group messages
 
@@ -1278,3 +1302,10 @@ def main():
         },
         fallbacks=[MessageHandler(Filters.all, default_fallback)]
     ))
+
+    # Delete all keys
+    dp.add_handler(CallbackQueryHandler(callback=delete_all_keys_confirm, pattern=text.buttons.settings.delete_all_keywords))
+
+    dp.add_handler(CallbackQueryHandler(callback=delete_all_keys, pattern=text.buttons.settings.delete_yes_cb))
+
+    dp.add_handler(CallbackQueryHandler(callback=delete_not_keywords, pattern=text.buttons.settings.delete_no_cb))
